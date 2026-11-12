@@ -222,6 +222,9 @@ if (page === "inscription") {
   };
   $("statut").onchange = () => { majBlocAdmin(); majFonction(); };
   $("statut2").onchange = majFonction;
+  if (new URLSearchParams(location.search).get("nouvelAdmin")) {   // après réinitialisation : administrateur + EEB-ONG
+    try { $("statut").value = "administrateur"; majBlocAdmin(); $("statut2").value = "EEB-ONG"; } catch (e) {}
+  }
   majBlocAdmin(); majFonction();
   $("formInscription").onsubmit = e => {
     e.preventDefault();
@@ -265,7 +268,7 @@ if (page === "connexion") {
     await EEB.vider(); location.href = "accueil.html";
   };
   $("formConnexion").onsubmit = async e => {
-    e.preventDefault();
+    e.preventDefault(); $("msg").className = "erreur";
     const email = $("email").value.trim().toLowerCase(), mdp = $("mdp").value;
     try { await EEB.connecter(email, mdp); } catch (err) { $("msg").textContent = EEB.messageErreur(err); return; }
     const u = lire("users", []).find(x => x.email === email);
@@ -289,6 +292,17 @@ if (page === "connexion") {
       catch (err) { $("msgVerif").textContent = EEB.messageErreur(err); }
     }
     else $("msgVerif").textContent = "Code incorrect.";
+  };
+  // Lien « Mettre à jour mon mot de passe » : envoie un e-mail de changement de mot de passe
+  const oubli = $("mdpOublie");
+  if (oubli) oubli.onclick = async e => {
+    e.preventDefault();
+    const msg = $("msg"), email = $("email").value.trim().toLowerCase();
+    if (!email) { msg.className = "erreur"; msg.textContent = "Saisissez d'abord votre adresse mail, puis touchez « Mettre à jour mon mot de passe »."; return; }
+    try {
+      await EEB.reinitialiserMdp(email);
+      msg.className = ""; msg.textContent = "Si un compte existe pour cette adresse, un e-mail de mise à jour du mot de passe vient d'être envoyé (vérifiez aussi les courriers indésirables).";
+    } catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
   const reinit = $("reinitSite");
   if (reinit) reinit.onclick = e => {
@@ -690,6 +704,47 @@ if (page === "admin") {
       if (err) { $("msgChanger").textContent = err; return; }
       try { await EEB.changerMdp($("mdpActuel").value, $("mdpNouveau2").value); $("formChangerMdp").reset(); $("msgChanger").textContent = "Mot de passe modifié."; }
       catch (x) { $("msgChanger").textContent = EEB.messageErreur(x); }
+    };
+
+    // ---- Comptes : suppression (sauf administrateur) et réinitialisation du compte administrateur ----
+    if (!$("sectionComptes")) {
+      const st = document.createElement("style");
+      st.textContent = "#comptesAdmin{list-style:none;padding:0;margin:0}#comptesAdmin li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #c5cad2}#comptesAdmin li span{min-width:0;word-break:break-word}#formReinitAdmin{display:grid;gap:10px;max-width:420px}#formReinitAdmin button{background:#c00}";
+      document.head.appendChild(st);
+      const sec = document.createElement("section"); sec.id = "sectionComptes";
+      sec.innerHTML = '<h2>Supprimer un compte</h2>' +
+        '<p><small>Tous les comptes peuvent être supprimés, sauf les comptes administrateur.</small></p>' +
+        '<ul id="comptesAdmin"></ul><p id="msgComptes"></p>' +
+        '<h2>Réinitialiser le compte administrateur</h2>' +
+        '<p><small>Supprime votre compte administrateur actuel pour en créer un nouveau (administrateur + EEB-ONG). Les autres données du site sont conservées.</small></p>' +
+        '<form id="formReinitAdmin"><input type="password" id="mdpReinit" placeholder="Mot de passe administrateur" autocomplete="current-password" required>' +
+        '<button>Réinitialiser mon compte administrateur</button><p id="msgReinit" class="erreur"></p></form>';
+      $("zoneAdmin").appendChild(sec);
+    }
+    const afficherComptes = () => {
+      const l = lire("users", []).filter(u => !estAdminUser(u)).sort((a, b) => nomMod(a).localeCompare(nomMod(b), "fr"));
+      $("comptesAdmin").innerHTML = l.length ? l.map(u => `<li><span><b>${echapper(nomMod(u))}</b> — ${echapper(u.email)} <small>(${echapper(u.statut || "")})</small></span>
+        <button type="button" data-email="${echapper(u.email)}">Supprimer</button></li>`).join("") : "<li>Aucun compte à supprimer.</li>";
+    };
+    $("comptesAdmin").onclick = e => {
+      const b = e.target.closest("button[data-email]"); if (!b) return;
+      const cible = lire("users", []).find(u => u.email === b.dataset.email);
+      if (!cible || estAdminUser(cible)) return;   // jamais un compte administrateur
+      if (!confirm("Supprimer le compte de " + nomMod(cible) + " (" + cible.email + ") ?")) return;
+      if (!ecrire("users", lire("users", []).filter(u => u.email !== cible.email || estAdminUser(u)))) return;
+      afficherComptes();
+      $("msgComptes").textContent = "Compte supprimé : cette personne ne peut plus accéder au site.";
+    };
+    afficherComptes();
+    $("formReinitAdmin").onsubmit = async e => {
+      e.preventDefault();
+      const msg = $("msgReinit"); msg.className = "erreur";
+      if (!confirm("Votre compte administrateur sera supprimé définitivement. Vous serez ensuite invité à créer le nouveau compte administrateur + EEB-ONG. Continuer ?")) return;
+      msg.textContent = "Réinitialisation en cours…";
+      try {
+        await EEB.reinitialiserAdmin($("mdpReinit").value);
+        sessionStorage.removeItem("admin"); location.href = "inscription.html?nouvelAdmin=1";
+      } catch (err) { msg.textContent = EEB.messageErreur(err); }
     };
   };
   window.addEventListener("pageshow", e => {

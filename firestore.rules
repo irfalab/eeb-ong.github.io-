@@ -21,6 +21,8 @@ service cloud.firestore {
     match /meta/{d} {
       allow read: if true;
       allow create: if connecte() && d == 'admin' && !adminExiste();
+      // Réinitialisation du compte administrateur (bouton de la page Admin)
+      allow delete: if d == 'admin' && admin();
     }
 
     // Logo, images d'accueil, listes (métiers, centres, entreprises), texte d'engagement

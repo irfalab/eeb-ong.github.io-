@@ -6,7 +6,7 @@ import { initializeFirestore, getFirestore, persistentLocalCache, persistentMult
   collection, doc, getDoc, getDocs, onSnapshot, writeBatch, setDoc, waitForPendingWrites }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
+  signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider, sendPasswordResetEmail, deleteUser }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 // ⬇⬇⬇ COLLEZ ICI VOTRE firebaseConfig (Console Firebase > Paramètres du projet > Vos applications)
@@ -50,6 +50,7 @@ let db;
 try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (e) { console.warn("Cache hors ligne indisponible :", e); try { db = initializeFirestore(app, {}); } catch (e2) { db = getFirestore(app); } }
 const auth = getAuth(app);
+try { auth.languageCode = "fr"; } catch (e) {}
 
 const erreurUI = m => (window.afficherErreur ? window.afficherErreur(m) : console.error(m));
 const canon = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
@@ -174,7 +175,8 @@ const MESSAGES = {
   "auth/email-already-in-use": "Cet email existe déjà.", "auth/weak-password": "Mot de passe : 6 caractères minimum.",
   "auth/too-many-requests": "Trop d'essais : réessayez dans quelques minutes.", "auth/network-request-failed": "Pas de connexion internet.",
   "eeb/autorisation": "Autorisation refusée : e-mail ou mot de passe administrateur incorrect.",
-  "permission-denied": "Action non autorisée pour ce compte."
+  "permission-denied": "Action non autorisée pour ce compte.", "auth/requires-recent-login": "Reconnectez-vous puis réessayez.",
+  "auth/missing-email": "Saisissez votre adresse mail."
 };
 const messageErreur = e => MESSAGES[e && e.code] || ("Erreur : " + ((e && e.message) || e));
 
@@ -222,13 +224,29 @@ async function verifierMdp(mdp) {
   try { await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, mdp)); return true; }
   catch (e) { return false; }
 }
+// Lien « Mettre à jour mon mot de passe » : Firebase envoie un e-mail avec un lien de changement
+async function reinitialiserMdp(email) { await sendPasswordResetEmail(auth, email.trim().toLowerCase()); }
+// Réinitialisation du compte administrateur : supprime le profil, le marqueur meta/admin et le compte de connexion,
+// ce qui permet de créer un nouveau premier administrateur (sans autorisation) depuis la page d'inscription.
+async function reinitialiserAdmin(mdp) {
+  const u = auth.currentUser; if (!u) throw { code: "auth/requires-recent-login" };
+  await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, mdp));
+  const b = writeBatch(db);
+  b.delete(doc(db, "users", u.uid));
+  b.delete(doc(db, "meta", "admin"));
+  await b.commit();
+  adminExisteFlag = false;
+  desabonner.forEach(f => f()); desabonner = [];
+  await deleteUser(u);
+  majSession();
+}
 async function changerMdp(ancien, nouveau) {
   const u = auth.currentUser;
   await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, ancien));
   await updatePassword(u, nouveau);
 }
 
-window.EEB = { lire, ecrire, connecter, deconnecter, inscrire, creerCompteAdmin, verifierMdp, changerMdp, messageErreur,
+window.EEB = { lire, ecrire, connecter, deconnecter, inscrire, creerCompteAdmin, verifierMdp, changerMdp, reinitialiserMdp, reinitialiserAdmin, messageErreur,
   adminExiste: () => adminExisteFlag, vider: () => waitForPendingWrites(db).catch(() => {}), db, auth };
 
 // ---- Démarrage : session, données, puis app.js ----
