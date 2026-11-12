@@ -751,7 +751,7 @@ const LIBS_QR = ["https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.m
 const LIBS_JSQR = ["https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js", "https://unpkg.com/jsqr@1.4.0/dist/jsQR.js", "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"];
 const scriptsCharges = {};
 const charger = src => scriptsCharges[src] || (scriptsCharges[src] = new Promise((ok, ko) => {
-  const s = document.createElement("script"); s.src = src; s.onload = () => ok();
+  const s = document.createElement("script"); s.crossOrigin = "anonymous"; s.src = src; s.onload = () => ok();
   s.onerror = () => { delete scriptsCharges[src]; ko(new Error("chargement impossible")); }; document.head.appendChild(s); }));
 // Essaie plusieurs adresses l'une après l'autre jusqu'à ce que la bibliothèque (testée par ok()) soit disponible
 async function chargerUne(urls, ok) {
@@ -778,10 +778,10 @@ stPresence.textContent = `.qr-carte{text-align:center;margin:14px auto;padding:1
   .pres{color:#2e9e4f;font-weight:600} .abs{color:#c00;font-weight:600} .attente{color:#8a93a0;font-weight:600}
   .ligne-choix{display:flex;justify-content:flex-end;margin:0 0 12px}
   .ligne-choix select{width:45%;max-width:260px}
-  .fenetre-fond{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+  .fenetre-fond{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
   .fenetre{background:var(--bg);color:var(--bleu);border-radius:14px;padding:20px;max-width:420px;width:100%;text-align:center;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
   .fenetre p{margin:0 0 14px;line-height:1.5}
-  .fenetre video{width:100%;max-height:50vh;border-radius:8px;background:#000;margin-bottom:12px}
+  .fenetre video{width:100%;max-height:50vh;object-fit:cover;border-radius:8px;background:#000;margin-bottom:12px}
   .fenetre .secondaire{background:var(--bleu)}
   .boutons-scan{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}`;
 document.head.appendChild(stPresence);
@@ -814,8 +814,9 @@ async function ouvrirScanner(titre, suite) {
 
   // Lecteur : natif si possible, sinon jsQR (chargé depuis plusieurs sources)
   const preparer = async () => {
-    if (natif || typeof jsQR === "function") return true;
-    try { if ("BarcodeDetector" in window) { natif = new BarcodeDetector({formats:["qr_code"]}); return true; } } catch (e) { natif = null; }
+    if (typeof jsQR === "function") return true;
+    try { if (!natif && "BarcodeDetector" in window) natif = new BarcodeDetector({formats:["qr_code"]}); } catch (e) { natif = null; }
+    if (natif) { chargerUne(LIBS_JSQR, () => typeof jsQR === "function").catch(() => {}); return true; }   // jsQR chargé en secours, sans bloquer
     etat.textContent = "Chargement du lecteur de code QR…";
     if (await chargerUne(LIBS_JSQR, () => typeof jsQR === "function")) return true;
     etat.textContent = "Lecteur de code QR introuvable : vérifiez la connexion internet puis réessayez.";
@@ -853,7 +854,11 @@ async function ouvrirScanner(titre, suite) {
   if (!await preparer()) return;
   if (!actif) return;
   etat.textContent = "Démarrage de la caméra…";
-  try { flux = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false}); }
+  try {
+    try { flux = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false}); }
+    catch (e0) { if (e0 && (e0.name === "NotAllowedError" || e0.name === "NotFoundError" || e0.name === "NotReadableError")) throw e0;
+      flux = await navigator.mediaDevices.getUserMedia({video:true, audio:false}); }
+  }
   catch (e) {
     etat.textContent = e && e.name === "NotAllowedError" ? "Accès à la caméra refusé : autorisez la caméra pour ce site dans le navigateur, ou utilisez « Photo du code »."
       : e && e.name === "NotFoundError" ? "Aucune caméra détectée : utilisez « Photo du code »."
@@ -861,7 +866,7 @@ async function ouvrirScanner(titre, suite) {
       : "Caméra indisponible (" + (e && e.name || "erreur") + ") : utilisez « Photo du code ».";
     return; }
   if (!actif) { flux.getTracks().forEach(p => p.stop()); return; }
-  video.srcObject = flux; video.style.display = "block"; try { await video.play(); } catch (e) {}
+  video.setAttribute("playsinline", ""); video.muted = true; video.srcObject = flux; video.style.display = "block"; try { await video.play(); } catch (e) {}
   etat.textContent = "Placez le code QR devant la caméra.";
   let occupe = false;
   const boucle = async () => {
