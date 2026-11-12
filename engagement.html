@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e5aa8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EEB-ONG">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<title>Engagement - EEB-ONG</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+/* Fond #dde1e7, ombres douces, textes bleu et orange */
+:root{--bleu:#1e5aa8;--orange:#f28c28;--bg:#dde1e7;--shadow-dark:#a3b1c6;--shadow-light:#ffffff}
+*{box-sizing:border-box}
+body{margin:0;font-size:14px;font-family:'Poppins',Arial,sans-serif;background:var(--bg);color:var(--bleu)}
+body:has(nav){padding-top:80px}
+h1,h2{color:var(--bleu)} h1{font-size:1.4rem} h2{font-size:1.2rem;border-bottom:3px solid var(--orange);padding-bottom:6px}
+main{max-width:900px;margin:auto;padding:20px}
+.logo{max-width:100%;height:auto}
+.centre{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.logo-grand{width:min(80vw,420px)}
+a{color:var(--orange);font-weight:bold}
+form{display:grid;gap:12px}
+input,select,button,textarea,table,.btn{font-family:inherit;transition:color .2s, box-shadow .2s;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+input,select,textarea{padding:10px;font-size:.9rem;border:none;border-radius:8px;background:var(--bg);color:var(--bleu)}
+button,.btn{background:var(--orange);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:10px 16px;text-decoration:none;display:inline-block;font-size:.9rem}
+button:hover,.btn:hover{box-shadow:inset 2px 2px 4px rgba(0,0,0,.25), inset -2px -2px 4px rgba(255,255,255,.2)}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:var(--bg);border-radius:8px;overflow:hidden}
+th{background:var(--bleu);color:#fff} th,td{border:1px solid #c5cad2;padding:8px;text-align:left}
+.erreur{color:#c00}
+/* Navbar : fixée en haut à gauche, 60% de la largeur, sans trait orange */
+nav{position:fixed;top:0;left:0;width:60%;border-radius:0 0 14px 0;background:var(--bg);display:flex;justify-content:space-around;z-index:10;transition:box-shadow .2s;box-shadow:0 4px 6px var(--shadow-dark)}
+.item{position:relative;text-align:center;padding:6px 4px;font-size:.75rem}
+.item>a{display:block;text-decoration:none;color:var(--bleu)} .item span{font-size:1.2rem;display:block}
+.menu{display:none;position:absolute;top:100%;left:0;background:var(--bg);border:1px solid var(--orange);min-width:140px;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+.item:hover .menu,.item:focus-within .menu{display:block}
+.menu a{display:block;padding:8px;text-decoration:none;color:var(--bleu)}
+.entete-page{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:3px solid var(--orange);margin:16px 0}
+.entete-page h1,.entete-page h2{border:none;margin:0 0 6px;padding:0}
+.recherche{width:45%;max-width:260px;margin-bottom:6px}
+.logo-moyen{position:fixed;top:6px;right:12px;width:80px;z-index:9}
+/* En-tête de la fiche (comme le papier à en-tête) */
+.entete{text-align:center;padding:14px 12px;border-radius:14px;background:var(--bg);box-shadow:5px 5px 8px #c2c6cb, -5px -5px 8px #f8fcff;margin-bottom:20px;line-height:1.6}
+.entete .ong{font-size:1.1rem;font-weight:600;border-bottom:3px solid var(--orange);padding-bottom:6px;margin-bottom:8px}
+.entete small{display:block;font-size:.78rem}
+
+/* Carte du formulaire */
+.fiche{padding:20px;border-radius:14px;background:var(--bg);box-shadow:5px 5px 8px #c2c6cb, -5px -5px 8px #f8fcff}
+form{display:grid;gap:14px}
+label{font-weight:600;display:block;margin-bottom:4px}
+input[type=text],input[type=date],input[type=tel],select,textarea{width:100%;padding:10px;font-size:.9rem;font-family:inherit;border:none;border-radius:8px;background:var(--bg);color:var(--bleu);box-shadow:inset 3px 3px 5px #c2c6cb, inset -3px -3px 5px #f8fcff}
+input:focus{outline:2px solid var(--orange)}
+button,.btn{font-family:inherit;background:var(--orange);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:10px 16px;font-size:.9rem;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light);transition:box-shadow .2s}
+button:hover{box-shadow:inset 2px 2px 4px rgba(0,0,0,.25), inset -2px -2px 4px rgba(255,255,255,.2)}
+button.sec{background:var(--bg);color:var(--bleu)}
+
+/* Choix du métier */
+fieldset{border:none;margin:0;padding:0;display:grid;gap:8px}
+legend{font-weight:600;margin-bottom:6px;padding:0}
+.choix{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:8px;box-shadow:inset 3px 3px 5px #c2c6cb, inset -3px -3px 5px #f8fcff;cursor:pointer}
+.choix input{margin-top:3px;accent-color:var(--orange);width:18px;height:18px;flex:none}
+.choix span{font-weight:600}
+
+/* Texte d’engagement */
+.texte p{margin:8px 0;line-height:1.7;text-align:justify}
+.texte ul{margin:8px 0;padding-left:22px;line-height:1.7}
+.texte li{margin-bottom:6px;text-align:justify}
+.accord{display:flex;gap:10px;align-items:flex-start;font-weight:600}
+.accord input{margin-top:3px;accent-color:var(--orange);width:18px;height:18px;flex:none}
+
+/* Signatures */
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.zone-sig{height:140px;width:100%;border-radius:8px;background:var(--bg);box-shadow:inset 3px 3px 5px #c2c6cb, inset -3px -3px 5px #f8fcff;touch-action:none;cursor:crosshair;display:block}
+.directeur{text-align:center}
+.directeur .cadre{height:140px;border-radius:8px;box-shadow:inset 3px 3px 5px #c2c6cb, inset -3px -3px 5px #f8fcff;display:flex;align-items:center;justify-content:center;font-style:italic;opacity:.7}
+.directeur b{display:block;margin-top:8px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.erreur{color:#c00;text-align:center;min-height:1.2em;margin:0}
+.ok{color:#2a8a3a}
+
+/* Tablette */
+@media (min-width:601px) and (max-width:1024px){main{padding:16px}}
+/* Smartphone */
+@media (max-width:600px){main{padding:12px}.fiche{padding:14px}.actions button{flex:1 1 100%}.texte p,.texte li{text-align:left}}
+
+
+/* Listes de choix (parent, métier) et textes complétés */
+.choix-liste{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.choix-liste select{flex:1 1 220px;max-width:340px;cursor:pointer}
+.nom{font-weight:600;border-bottom:1px dotted var(--bleu);padding:0 4px}
+.nomsig{display:block;text-align:center;margin-top:8px}
+/* Signature et cachet du Directeur (image PNG) */
+.directeur .cadre img{max-width:100%;max-height:130px;height:auto}
+/* Champs désactivés ou en lecture seule (affichage lisible) */
+select:disabled,input:disabled,input:read-only{opacity:1;color:var(--bleu);-webkit-text-fill-color:var(--bleu);cursor:default}
+.accord input:disabled{opacity:1}
+.cadre-sig{min-height:140px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:6px;box-shadow:inset 3px 3px 5px #c2c6cb, inset -3px -3px 5px #f8fcff}
+.cadre-sig img{max-width:100%;max-height:130px;height:auto}
+#sansSignature{font-style:italic;opacity:.75;margin:0;text-align:center}
+.entete-page h1{text-align:left}
+@media print{nav,.noprint,.logo-moyen,#parent,.recherche-box{display:none} body{background:#fff;padding-top:0!important} *{box-shadow:none!important}
+  .entete,.fiche{border:1px solid #999}
+  input,select{border:none!important;border-bottom:1px dotted #333!important;background:none!important;appearance:none;-webkit-appearance:none}
+  .cadre-sig,.directeur .cadre{border:1px solid #999}}
+
+/* ===== Signatures réduites, côte à côte (écran + impression) ===== */
+.signatures{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.signatures label{font-size:.8rem;margin-bottom:2px}
+.cadre-sig{min-height:60px;height:60px;padding:3px}
+.cadre-sig img{max-height:54px}
+.directeur .cadre{height:60px}
+.directeur .cadre img{max-height:54px}
+.directeur b,.nomsig{margin-top:4px;font-size:.8rem}
+#sansSignature{font-size:.7rem}
+
+/* ===== Impression : une seule page A4 ===== */
+@page{size:A4 portrait;margin:8mm}
+@media print{
+  html,body{width:auto;font-size:13pt!important}
+  body{padding-top:0!important}
+  main{max-width:none;padding:0;margin:0}
+  main>h2{display:none}
+  h1{font-size:16pt;margin:0 0 6px}
+  .entete{padding:5px 8px;margin-bottom:6px;line-height:1.3}
+  .entete .ong{font-size:14.5pt;padding-bottom:3px;margin-bottom:3px}
+  .entete small{font-size:9.5pt}
+  .fiche{padding:8px 10px}
+  form{gap:5px}
+  .texte p{margin:4px 0;line-height:1.4;text-align:justify}
+  .texte ul{margin:4px 0;padding-left:20px;line-height:1.4}
+  .texte li{margin-bottom:2px;text-align:justify}
+  label{margin-bottom:2px}
+  .accord input{width:14px;height:14px}
+  .signatures{grid-template-columns:1fr 1fr;gap:10px}
+  .cadre-sig,.directeur .cadre{height:55px;min-height:55px}
+  .cadre-sig img,.directeur .cadre img{max-height:50px}
+  .fiche,.signatures{page-break-inside:avoid;break-inside:avoid}
+}
+
+/* ===== Occuper toute la page A4 (impression) ===== */
+@media print{
+  html,body{height:auto;width:auto}
+  main{display:flex;flex-direction:column;height:279mm;overflow:hidden}
+  .entete{flex:none;margin-bottom:8px}
+  .fiche{flex:1;display:flex;flex-direction:column;padding:12px 14px;min-height:0}
+  .fiche h1{flex:none;margin:0 0 6px}
+  #formEng{flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:0}
+  .texte p{margin:6px 0}
+  .signatures{gap:14px}
+  .cadre-sig,.directeur .cadre{height:32mm;min-height:32mm}
+  .cadre-sig img,.directeur .cadre img{max-height:30mm}
+}
+
+/* ===== Petit logo sur la ligne du titre « Engagement », côté opposé (impression seulement) ===== */
+.logo-titre{display:none}
+@media print{
+  .entete-page{flex:none;margin:0 0 6px;padding-bottom:2px}
+  .entete-page h2{flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0}
+  .logo-titre{display:block;width:auto;max-width:38mm;height:10mm;object-fit:contain;object-position:right center;flex:none}
+}
+</style>
+</head>
+<body data-page="engagement">
+<nav id="nav"></nav>
+<main>
+<h2>Engagement<img class="logo logo-titre" alt="Logo EEB-ONG"></h2>
+
+<div class="entete">
+<div class="ong">ONG ENFANT ÉPANOUI-BÉNIN</div>
+<small>BP : 51 Nikki — Tél : 66 30 44 73 / 65 69 00 09 / 96 11 76 86</small>
+<small>Email : enfantepanouib_ong@yahoo.fr — Site web : https://enfantepanouibenin.org/</small>
+<small>Quartier Gah-Maro, dans la von de la CLCAM en allant vers l’hôtel Chez John</small>
+<small>N° d’enregistrement 2005/027/PDBA/SG/SGA-DASCSR du 18/08/2005</small>
+<small>Compte bancaire : N° 224450139774 ORA-BANK — EEB ONG</small>
+</div>
+
+<div class="fiche">
+<h1>Fiche d’engagement bénéficiaire</h1>
+
+<form id="formEng" onsubmit="return false">
+
+<div class="choix-liste noprint">
+<select id="parent" aria-label="Parent"><option value="">Choisir le parent</option></select>
+<select id="metier" aria-label="Métier"><option value="">Choisir le métier</option></select>
+</div>
+
+<div class="texte" id="texteEng"></div>
+
+<label class="accord"><input type="checkbox" id="accord"><span>J’ai lu et j’accepte les engagements ci-dessus.</span></label>
+
+<div>
+<label for="dateEng">Date</label>
+<input type="date" id="dateEng">
+</div>
+
+<div class="signatures">
+<div>
+<label>Nom, prénoms et signature</label>
+<div class="cadre-sig">
+<img id="signatureVue" alt="Signature du bénéficiaire" style="display:none">
+<p id="sansSignature" style="display:none">Aucune signature enregistrée pour ce parent.</p>
+</div>
+<b class="nomsig" id="nomParentSig">………………</b>
+</div>
+<div class="directeur">
+<label>Le Directeur Exécutif</label>
+<div class="cadre" id="cadreDirecteur"><img id="signatureDirecteur" alt="Signature et cachet du Directeur Exécutif" style="display:none"><span id="cadreDirecteurTexte">Signature et cachet</span></div>
+<b>Tahirou BIO MAMADOU YAROU</b>
+</div>
+</div>
+
+<div class="actions noprint">
+<button type="button" class="sec" id="imprimer">Imprimer / PDF</button>
+</div>
+
+</form>
+</div>
+</main>
+<script type="module" src="firebase-init.js"></script>
+<script>document.getElementById("imprimer").onclick = function(){ window.print(); };</script>
+</body></html>

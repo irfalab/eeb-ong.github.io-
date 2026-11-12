@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e5aa8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EEB-ONG">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<title>Administrateur - EEB-ONG</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Fond #dde1e7, ombres douces, textes bleu et orange */
+:root{--bleu:#1e5aa8;--orange:#f28c28;--bg:#dde1e7;--shadow-dark:#a3b1c6;--shadow-light:#ffffff}
+*{box-sizing:border-box}
+body{margin:0;font-size:13px;font-family:'Poppins',Arial,sans-serif;background:var(--bg);color:var(--bleu)}
+body:has(nav){padding-top:80px}
+h1,h2{color:var(--bleu)} h1{font-size:1.4rem} h2{font-size:1.2rem;border-bottom:3px solid var(--orange);padding-bottom:6px}
+main{max-width:900px;margin:auto;padding:20px}
+.logo{max-width:100%;height:auto}
+.centre{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.logo-grand{width:min(80vw,420px)}
+a{color:var(--orange);font-weight:bold}
+form{display:grid;gap:12px}
+input,select,button,textarea,table,.btn{font-family:inherit;transition:color .2s, box-shadow .2s;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+input,select,textarea{padding:10px;font-size:.9rem;border:none;border-radius:8px;background:var(--bg);color:var(--bleu)}
+button,.btn{background:var(--orange);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:10px 16px;text-decoration:none;display:inline-block;font-size:.9rem}
+button:hover,.btn:hover{box-shadow:inset 2px 2px 4px rgba(0,0,0,.25), inset -2px -2px 4px rgba(255,255,255,.2)}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:var(--bg);border-radius:8px;overflow:hidden}
+th{background:var(--bleu);color:#fff} th,td{border:1px solid #c5cad2;padding:8px;text-align:left}
+.erreur{color:#c00}
+/* Navbar : fixée en haut à gauche, 60% de la largeur, sans trait orange */
+nav{position:fixed;top:0;left:0;width:60%;border-radius:0 0 14px 0;background:var(--bg);display:flex;justify-content:space-around;z-index:10;transition:box-shadow .2s;box-shadow:0 4px 6px var(--shadow-dark)}
+.item{position:relative;text-align:center;padding:6px 4px;font-size:.75rem}
+.item>a{display:block;text-decoration:none;color:var(--bleu)} .item span{font-size:1.2rem;display:block}
+.menu{display:none;position:absolute;top:100%;left:0;background:var(--bg);border:1px solid var(--orange);min-width:140px;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+.item:hover .menu,.item:focus-within .menu{display:block}
+.menu a{display:block;padding:8px;text-decoration:none;color:var(--bleu)}
+.entete-page{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:3px solid var(--orange);margin:16px 0}
+.entete-page h1,.entete-page h2{border:none;margin:0 0 6px;padding:0}
+.recherche{width:45%;max-width:260px;margin-bottom:6px}
+.logo-moyen{position:fixed;top:6px;right:12px;width:80px;z-index:9}
+@media print{nav,.noprint{display:none} body{background:#fff;padding-top:0!important} *{box-shadow:none!important}}
+label{display:grid;gap:4px}
+/* Listes : le bouton Ajouter est dans la même colonne que les boutons Supprimer */
+.liste-admin{list-style:none;padding:0;margin:12px 0;display:grid;gap:10px}
+.liste-admin li,.ligne-liste{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.liste-admin li>span,.ligne-liste input{flex:1;min-width:0}
+.liste-admin li button,.ligne-liste button{width:110px;flex:none;padding:8px 6px}
+.liste-admin .actions{display:flex;gap:8px;flex:none}
+.liste-admin .actions button{width:96px}
+.ligne-liste{margin:12px 0}
+/* Formulaires de modification (documents, déploiement) */
+.boutons-form{display:flex;gap:10px;flex-wrap:wrap}
+.secondaire{background:var(--bleu)}
+.case{display:flex;align-items:center;gap:8px}
+.case input{box-shadow:none;padding:0;width:auto}
+.zone-edition{display:none;gap:10px;padding:12px;border-radius:8px;border-left:4px solid var(--orange);box-shadow:inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light)}
+.zone-edition p{margin:0}
+#docImgActuelle{max-width:140px;max-height:100px;border-radius:8px;object-fit:cover}
+h4{margin:18px 0 6px}
+/* Barre fine de téléversement : bleue pendant le chargement, verte quand l'image est chargée */
+.barre-tele{height:6px;margin-top:8px;border-radius:3px;background:#c5cad2;overflow:hidden}
+.barre-tele-remplie{height:100%;width:0;background:var(--bleu);transition:width .3s, background .3s}
+.barre-tele.ok .barre-tele-remplie{background:#2e9e4f}
+.barre-tele.erreur-tele .barre-tele-remplie{background:#c00}
+.etat-tele{margin:4px 0 0;font-size:.8rem;min-height:1.2em}
+/* Section Engagement : même formulaire que la page Engagement */
+#titreEng{text-align:center}
+#formEng{max-width:700px;margin:0 auto;background:none;border:none;box-shadow:none;padding:0}
+#formEng label{font-weight:600}
+#formEng .case{font-weight:600}
+#engSignature{width:100%;max-width:420px;height:auto;border-radius:8px}
+.texte-eng p{margin:6px 0;line-height:1.7}
+.texte-eng ul{margin:6px 0;padding-left:22px;line-height:1.7}
+#formEng p{margin:0}
+#engApercuTexte .nom{font-weight:600;border-bottom:1px dotted var(--bleu);padding:0 4px}
+.edition-texte{display:grid;gap:10px;max-width:700px;margin:0 auto 20px}
+.edition-texte textarea{width:100%;line-height:1.5;resize:vertical}
+.aide-texte{margin:0;font-size:.8rem;line-height:1.5}
+#titreEng~h4{text-align:center}
+</style>
+</head>
+<body data-page="admin">
+<nav id="nav"></nav>
+<main>
+<h2>Administrateur</h2>
+<div id="accesRefuse" style="display:none"><p class="erreur">Cette page est réservée aux administrateurs. Connectez-vous avec un compte administrateur.</p>
+<p><a href="connexion.html">Se connecter</a> · <a href="inscription.html">Créer un compte</a></p></div>
+<form id="formCode" style="display:none"><input type="password" id="codeAdmin" placeholder="Mot de passe du compte administrateur" required>
+<button>Déverrouiller</button><p id="msgCode" class="erreur"></p></form>
+<div id="zoneAdmin" style="display:none">
+<div class="boutons-form noprint"><button type="button" id="deconnexionAdmin" class="secondaire">Se déconnecter</button></div>
+<h3>Mon mot de passe</h3>
+<form id="formChangerMdp">
+<input type="password" id="mdpActuel" placeholder="Mot de passe actuel" required>
+<input type="password" id="mdpNouveau2" placeholder="Nouveau mot de passe" required>
+<input type="password" id="mdpConfirm2" placeholder="Confirmer le nouveau mot de passe" required>
+<button>Modifier le mot de passe</button><p id="msgChanger" class="erreur"></p></form>
+<h3>Modérateurs du site</h3>
+<form id="formModo">
+<input id="modNom" placeholder="Nom" required><input id="modPrenom" placeholder="Prénom" required>
+<input id="modTel" type="tel" placeholder="Téléphone" required>
+<input id="modEmail" type="email" placeholder="Adresse mail" required>
+<input id="modMdp" type="password" placeholder="Mot de passe (6 caractères minimum)" required>
+<button>Ajouter le modérateur</button><p id="msgModo" class="erreur"></p></form>
+<ul class="liste-admin" id="modosAdmin"></ul>
+<h3>Parents</h3>
+<form id="formParent">
+<select id="parStatut"><option value="">Choisir le statut</option><option>apprenant</option></select>
+<select id="parApprenant" required></select>
+<input id="parNom" placeholder="Nom et prénom du parent" required>
+<input id="parTel" type="tel" placeholder="Téléphone" required>
+<input id="parCommune" placeholder="Commune"><input id="parAdresse" placeholder="Adresse">
+<button>Enregistrer le parent</button><p id="msgParent"></p></form>
+<h3 id="titreEng">Engagement</h3>
+<h4>Texte de la page Engagement</h4>
+<div class="edition-texte">
+<p class="aide-texte">Une ligne = un paragraphe. Commencez une ligne par <b>-</b> pour une puce, par <b>--</b> pour une sous-puce. Les mots <b>{parent}</b>, <b>{enfant}</b> et <b>{metier}</b> sont remplacés automatiquement sur la page Engagement.</p>
+<textarea id="texteEngSaisie" rows="16" aria-label="Texte de la page Engagement"></textarea>
+<div class="boutons-form">
+<button type="button" class="secondaire" data-ins="{parent}">Insérer {parent}</button>
+<button type="button" class="secondaire" data-ins="{enfant}">Insérer {enfant}</button>
+<button type="button" class="secondaire" data-ins="{metier}">Insérer {metier}</button>
+</div>
+<div class="boutons-form">
+<button type="button" id="texteEngEnregistrer">Enregistrer le texte</button>
+<button type="button" id="texteEngRetablir" class="secondaire">Rétablir le texte d’origine</button>
+</div>
+<p id="msgTexteEng" class="erreur"></p>
+</div>
+<h4>Aperçu et signatures</h4>
+<form id="formEng" novalidate>
+<label>Parent qui signe la fiche (nom et prénom)
+<select id="engParent" aria-label="Parent du bénéficiaire"><option value="">Choisir le parent</option></select></label>
+<p id="engInfoParent" class="aide-texte"></p>
+<div class="texte-eng" id="engApercuTexte"></div>
+<label class="case"><input type="checkbox" id="engAccord"> J’ai lu et j’accepte les engagements ci-dessus.</label>
+<p><b>Signature du bénéficiaire :</b></p>
+<canvas id="engSignature" width="400" height="150" style="border:2px solid #1e5aa8;touch-action:none;max-width:100%;background:#fff"></canvas>
+<p><b id="engNomSig">………………</b></p>
+<div class="boutons-form"><button type="button" id="engEffacer" class="secondaire">Effacer la signature</button></div>
+<h4>Signature et cachet du Directeur Exécutif</h4>
+<label>Image au format PNG<input type="file" id="engDirecteur" accept="image/png"></label>
+<img id="engDirApercu" alt="Signature et cachet du Directeur Exécutif" style="display:none;max-width:240px;max-height:150px;border-radius:8px;background:var(--bg);padding:6px;box-shadow:inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light)">
+<div class="boutons-form"><button type="button" id="engDirSuppr" class="secondaire" style="display:none">Supprimer l’image</button></div>
+<p id="msgDir" class="erreur"></p>
+<div class="boutons-form"><button>Enregistrer l’engagement</button></div>
+<p id="msgEng" class="erreur"></p></form>
+<h3>Témoignages</h3>
+<form id="formTem">
+<input id="temAuteur" placeholder="Nom de l'apprenant" required>
+<textarea id="temTexte" placeholder="Témoignage" rows="3"></textarea>
+<label>Image <input type="file" id="temImage" accept="image/*"></label>
+<input id="temVideo" placeholder="Lien de la vidéo (.mp4)">
+<button>Ajouter le témoignage</button></form>
+<ul class="liste-admin" id="temAdmin"></ul>
+<h3>Logo</h3><input type="file" id="logoFile" accept="image/*">
+<h4>Image explicative de la page d'accueil</h4><input type="file" id="accueilImageFile" accept="image/*">
+<div class="barre-tele" id="accueilBarre"><div class="barre-tele-remplie"></div></div><p class="etat-tele" id="accueilEtat"></p>
+<h4>Image explicative de la page À propos</h4><input type="file" id="aproposImageFile" accept="image/*">
+<div class="barre-tele" id="aproposBarre"><div class="barre-tele-remplie"></div></div><p class="etat-tele" id="aproposEtat"></p>
+<h3>Listes</h3>
+<select id="typeListe"><option value="metiers">Métiers</option><option value="centres">Centres de formation</option><option value="entreprises">Entreprises</option></select>
+<ul class="liste-admin" id="elements"></ul>
+<div class="ligne-liste"><input id="nouveau" placeholder="Nouvel élément"><button id="ajouter" type="button">Ajouter</button></div>
+<h3>Documents de formation</h3>
+<form id="formDoc">
+<input id="docTitre" placeholder="Titre du module" required>
+<textarea id="docTexte" placeholder="Description" rows="3"></textarea>
+<label>Image <input type="file" id="docImage" accept="image/*"></label>
+<label>Vidéo (fichier, 500 Ko max) <input type="file" id="docVideoFichier" accept="video/*"></label>
+<input id="docVideoLien" placeholder="ou lien de la vidéo (YouTube ou .mp4)">
+<label>Fichier (500 Ko max) <input type="file" id="docFichier"></label>
+<input id="docFichierLien" placeholder="ou lien du fichier (PDF, Word…)">
+<div id="docEditZone" class="zone-edition">
+<p id="docEditTitre"></p>
+<img id="docImgActuelle" alt="Image actuelle" style="display:none">
+<label class="case" id="caseImage"><input type="checkbox" id="docSupprImage"> Supprimer l'image actuelle</label>
+<label class="case" id="caseVideo"><input type="checkbox" id="docSupprVideo"> Supprimer la vidéo actuelle</label>
+<label class="case" id="caseFichier"><input type="checkbox" id="docSupprFichier"> Supprimer le fichier actuel</label>
+</div>
+<div class="boutons-form"><button id="docValider">Ajouter le document</button>
+<button type="button" id="docAnnuler" class="secondaire" style="display:none">Annuler</button></div>
+<p id="msgDoc" class="erreur"></p></form>
+<ul class="liste-admin" id="docsAdmin"></ul>
+<h3>Déploiement</h3>
+<h4>Créer un groupe de stage</h4>
+<form id="formDepCreation">
+<input id="crGroupe" placeholder="Nom du groupe de stage" required>
+<label>Apprenants du groupe (Ctrl pour en choisir plusieurs)<select id="crMembres" multiple size="5"></select></label>
+<select id="crMetier"></select><select id="crEntreprise"></select>
+<label>Date de départ <input type="date" id="crDepart" required></label>
+<label>Date de retour <input type="date" id="crRetour" required></label>
+<button>Créer le groupe</button><p id="msgDepCreation" class="erreur"></p></form>
+<h4>Groupes de stage</h4>
+<ul class="liste-admin" id="depAdmin"></ul>
+<form id="formDepAdmin" style="display:none">
+<p id="depTitre"><b></b></p>
+<input id="depGroupe" placeholder="Nom du groupe de stage" required>
+<label>Apprenants du groupe (Ctrl pour en choisir plusieurs)<select id="depMembres" multiple size="5"></select></label>
+<select id="depMetier"></select><select id="depEntreprise"></select>
+<label>Date de départ <input type="date" id="depDepart" required></label>
+<label>Date de retour <input type="date" id="depRetour" required></label>
+<div class="boutons-form"><button>Enregistrer les modifications</button>
+<button type="button" id="depAnnuler" class="secondaire">Annuler</button></div>
+<p id="msgDep" class="erreur"></p></form>
+<h4>Historique des modifications</h4>
+<ul class="liste-admin" id="depJournal"></ul>
+</div>
+</main>
+<script type="module" src="firebase-init.js"></script>
+</body></html>

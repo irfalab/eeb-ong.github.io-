@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e5aa8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EEB-ONG">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<title>Contact - EEB-ONG</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+/* Fond #dde1e7, ombres douces, textes bleu et orange */
+:root{--bleu:#1e5aa8;--orange:#f28c28;--bg:#dde1e7;--shadow-dark:#a3b1c6;--shadow-light:#ffffff}
+*{box-sizing:border-box}
+body{margin:0;font-size:13px;font-family:'Poppins',Arial,sans-serif;background:var(--bg);color:var(--bleu)}
+body:has(nav){padding-top:80px}
+h1,h2{color:var(--bleu)} h1{font-size:1.4rem} h2{font-size:1.2rem;border-bottom:3px solid var(--orange);padding-bottom:6px}
+main{max-width:900px;margin:auto;padding:20px}
+.logo{max-width:100%;height:auto}
+.centre{min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.logo-grand{width:min(80vw,420px)}
+a{color:var(--orange);font-weight:bold}
+form{display:grid;gap:12px}
+input,select,button,textarea,table,.btn{font-family:inherit;transition:color .2s, box-shadow .2s;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+input,select,textarea{padding:10px;font-size:.9rem;border:none;border-radius:8px;background:var(--bg);color:var(--bleu)}
+button,.btn{background:var(--orange);color:#fff;border:none;cursor:pointer;border-radius:8px;padding:10px 16px;text-decoration:none;display:inline-block;font-size:.9rem}
+button:hover,.btn:hover{box-shadow:inset 2px 2px 4px rgba(0,0,0,.25), inset -2px -2px 4px rgba(255,255,255,.2)}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:var(--bg);border-radius:8px;overflow:hidden}
+th{background:var(--bleu);color:#fff} th,td{border:1px solid #c5cad2;padding:8px;text-align:left}
+.erreur{color:#c00}
+/* Navbar : fixée en haut à gauche, 60% de la largeur, sans trait orange */
+nav{position:fixed;top:0;left:0;width:60%;border-radius:0 0 14px 0;background:var(--bg);display:flex;justify-content:space-around;z-index:10;transition:box-shadow .2s;box-shadow:0 4px 6px var(--shadow-dark)}
+.item{position:relative;text-align:center;padding:6px 4px;font-size:.75rem}
+.item>a{display:block;text-decoration:none;color:var(--bleu)} .item span{font-size:1.2rem;display:block}
+.menu{display:none;position:absolute;top:100%;left:0;background:var(--bg);border:1px solid var(--orange);min-width:140px;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+.item:hover .menu,.item:focus-within .menu{display:block}
+.menu a{display:block;padding:8px;text-decoration:none;color:var(--bleu)}
+.entete-page{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:3px solid var(--orange);margin:16px 0}
+.entete-page h1,.entete-page h2{border:none;margin:0 0 6px;padding:0}
+.recherche{width:45%;max-width:260px;margin-bottom:6px}
+.logo-moyen{position:fixed;top:6px;right:12px;width:80px;z-index:9}
+@media print{nav,.noprint{display:none} body{background:#fff;padding-top:0!important} *{box-shadow:none!important}}
+</style>
+</head>
+<body data-page="contact">
+<nav id="nav"></nav>
+<main>
+<h2>Contacter EEB-ONG</h2>
+<form id="formContact">
+<input id="nom" placeholder="Nom et prénom" required><input id="email" type="email" placeholder="Votre email" required>
+<textarea id="message" rows="4" placeholder="Votre message" required></textarea>
+<button>Envoyer</button><p id="msg"></p></form>
+<p>Suivez-nous :</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<a class="btn" style="background:#1877f2;display:flex;gap:6px;align-items:center" href="https://facebook.com" target="_blank"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M13.5 22v-8h3l.5-3.5h-3.5V8.3c0-1 .3-1.8 1.8-1.8H17V3.4C16.7 3.4 15.7 3.3 14.6 3.3c-2.5 0-4.1 1.5-4.1 4.2v2.9H7.5V14h3v8z"/></svg> Facebook</a>
+<a class="btn" style="background:#0a66c2;display:flex;gap:6px;align-items:center" href="https://linkedin.com" target="_blank"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6c.6-1 2-1.9 3.9-1.9 4 0 4.8 2.6 4.8 6V21h-4v-5c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.700V21h-4z"/></svg> LinkedIn</a>
+<a class="btn" style="background:linear-gradient(45deg,#f58529,#dd2a7b,#8134af);display:flex;gap:6px;align-items:center" href="https://instagram.com" target="_blank"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg> Instagram</a></div>
+</main>
+<script type="module" src="firebase-init.js"></script>
+</body></html>

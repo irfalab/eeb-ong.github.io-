@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function connecte() { return request.auth != null; }
+    function profil() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function aProfil() { return connecte() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function aStatut(s) { return aProfil() && (profil().statut == s || profil().get('statut2', '') == s); }
+    function admin() { return aStatut('administrateur'); }
+    function adminExiste() { return exists(/databases/$(database)/documents/meta/admin); }
+
+    // Un compte qui s'inscrit seul ne peut pas se donner le statut administrateur ou modérateur
+    // (sauf le tout premier administrateur, tant que le document meta/admin n'existe pas).
+    function statutAutorise(d) {
+      return (d.statut in ['apprenant', 'formateur', 'tuteur', 'EEB-ONG']
+              || (d.statut == 'administrateur' && !adminExiste()))
+          && d.get('statut2', '') in ['', 'apprenant', 'formateur', 'tuteur', 'EEB-ONG'];
+    }
+
+    // Savoir si un administrateur existe (page d'inscription) : lisible par tous, créé une seule fois
+    match /meta/{d} {
+      allow read: if true;
+      allow create: if connecte() && d == 'admin' && !adminExiste();
+    }
+
+    // Logo, images d'accueil, listes (métiers, centres, entreprises), texte d'engagement
+    match /config/{k} {
+      allow read: if true;
+      allow write: if admin();
+    }
+    // Signature et cachet du Directeur
+    match /prive/{k} {
+      allow read: if connecte();
+      allow write: if admin();
+    }
+
+    match /users/{uid} {
+      allow read: if connecte();
+      allow create: if (connecte() && request.auth.uid == uid && statutAutorise(request.resource.data)) || admin();
+      allow update: if (connecte() && request.auth.uid == uid
+                        && request.resource.data.statut == resource.data.statut
+                        && request.resource.data.get('statut2', '') == resource.data.get('statut2', ''))
+                    || admin();
+      allow delete: if admin();
+    }
+
+    match /parents/{d}      { allow read: if connecte(); allow write: if admin(); }
+    match /groupes/{d}      { allow read: if connecte(); allow write: if admin(); }
+    match /engagements/{d}  { allow read: if connecte(); allow write: if admin() || aStatut('EEB-ONG'); }
+
+    // Suivis et présences : tout compte connecté (les apprenants scannent le QR code)
+    match /suivis/{d}          { allow read, write: if connecte(); }
+    match /presences/{d}       { allow read, write: if connecte(); }
+    match /presencesBureau/{d} { allow read, write: if connecte(); }
+
+    // Documents et témoignages : visibles par tous, modifiés par l'administrateur
+    match /documents/{d}   { allow read: if true; allow write: if admin(); }
+    match /temoignages/{d} { allow read: if true; allow write: if admin(); }
+
+    match /journalDep/{d}  { allow read, write: if admin(); }
+
+    // Messages du formulaire Contact : tout le monde peut en envoyer, seul l'administrateur les lit
+    match /messages/{d} {
+      allow create: if true;
+      allow read, update, delete: if admin();
+    }
+  }
+}

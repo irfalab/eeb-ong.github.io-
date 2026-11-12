@@ -1,0 +1,13 @@
+MISE EN PLACE FIREBASE - EEB-ONG (plan Spark, sans Storage)
+
+1. Remplacer vos fichiers par ceux de ce dossier (toutes les pages .html, app.js, firebase-init.js).
+   app1.js n'est plus utilisé.
+2. Ouvrir firebase-init.js et coller votre firebaseConfig à la place des "COLLER_ICI".
+3. Console Firebase > Firestore Database > onglet "Règles" : coller le contenu de firestore.rules, puis "Publier".
+4. Console Firebase > Authentication > Paramètres > Domaines autorisés : ajouter le domaine où le site est publié
+   (localhost est déjà autorisé).
+5. Le site doit être servi en http(s) (pas en double-clic sur le fichier) : par exemple "npx serve", l'extension
+   Live Server de VS Code, ou Firebase Hosting.
+6. Ouvrir inscription.html et créer le PREMIER compte avec le statut "administrateur" (aucune autorisation demandée).
+
+Les données du localStorage ne sont pas reprises : la base Firebase démarre vide.
