@@ -803,7 +803,7 @@ async function ouvrirScanner(titre, suite) {
   const fond = document.createElement("div"); fond.className = "fenetre-fond";
   fond.innerHTML = '<div class="fenetre"><p><b class="titre-scan"></b></p><video playsinline muted style="display:none"></video>' +
     '<p class="etat-scan">Démarrage…</p><div class="boutons-scan"><button type="button" class="photo">📷 Photo du code</button>' +
-    '<button type="button" class="secondaire annuler">Annuler</button></div><input type="file" accept="image/*" capture="environment" hidden></div>';
+    '<button type="button" class="reessayer" style="display:none">↻ Réessayer</button><button type="button" class="secondaire annuler">Annuler</button></div><input type="file" accept="image/*" capture="environment" hidden></div>';
   fond.querySelector(".titre-scan").textContent = titre;
   document.body.appendChild(fond);
   const video = fond.querySelector("video"), etat = fond.querySelector(".etat-scan"), fichier = fond.querySelector("input[type=file]");
@@ -811,6 +811,7 @@ async function ouvrirScanner(titre, suite) {
   let flux = null, actif = true, natif = null;
   const fermer = () => { actif = false; if (flux) flux.getTracks().forEach(p => p.stop()); fond.remove(); };
   fond.querySelector(".annuler").onclick = fermer;
+  const btnRe = fond.querySelector(".reessayer"); btnRe.onclick = () => { fermer(); ouvrirScanner(titre, suite); };
 
   // Lecteur : natif si possible, sinon jsQR (chargé depuis plusieurs sources)
   const preparer = async () => {
@@ -860,7 +861,8 @@ async function ouvrirScanner(titre, suite) {
       flux = await navigator.mediaDevices.getUserMedia({video:true, audio:false}); }
   }
   catch (e) {
-    etat.textContent = e && e.name === "NotAllowedError" ? "Accès à la caméra refusé : autorisez la caméra pour ce site dans le navigateur, ou utilisez « Photo du code »."
+    btnRe.style.display = "";
+    etat.textContent = e && e.name === "NotAllowedError" ? "Caméra non autorisée. Si le navigateur affiche « Ce site ne peut pas demander votre autorisation », désactivez les surcouches (filtre lumière bleue / confort visuel, bulles de discussion, enregistreur d'écran), puis touchez « Réessayer ». Sinon, autorisez la caméra dans les réglages du site ou utilisez « Photo du code »."
       : e && e.name === "NotFoundError" ? "Aucune caméra détectée : utilisez « Photo du code »."
       : e && e.name === "NotReadableError" ? "La caméra est utilisée par une autre application : fermez-la puis réessayez."
       : "Caméra indisponible (" + (e && e.name || "erreur") + ") : utilisez « Photo du code ».";

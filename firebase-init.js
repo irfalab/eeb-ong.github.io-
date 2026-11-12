@@ -32,8 +32,23 @@ const ORDRE_INVERSE = ["journalDep"];                // plus récent d'abord
 const PAGES_TEMPS_REEL = ["suivi","formateur","tuteur","presence","deploiement","parents","liste","documents","temoignages"];
 const MAX_DOC = 900000;                              // Firestore : 1 Mo maximum par document
 
+// ---- Stockage du navigateur bloqué (navigateur intégré, mode privé, cookies bloqués) : repli en mémoire ----
+(() => {
+  const memoire = () => { const d = {}; return {
+    getItem: k => Object.prototype.hasOwnProperty.call(d, k) ? d[k] : null, setItem: (k, v) => { d[k] = String(v); },
+    removeItem: k => { delete d[k]; }, clear: () => { for (const k in d) delete d[k]; }, key: i => Object.keys(d)[i] || null,
+    get length() { return Object.keys(d).length; } }; };
+  for (const nom of ["localStorage", "sessionStorage"]) {
+    let ok = false;
+    try { const st = window[nom]; const t = "__test__"; st.setItem(t, "1"); st.removeItem(t); ok = true; } catch (e) {}
+    if (!ok) { try { Object.defineProperty(window, nom, { value: memoire(), configurable: true }); } catch (e) {} }
+  }
+})();
+
 const app = initializeApp(FIREBASE_CONFIG);
-const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch (e) { console.warn("Cache hors ligne indisponible :", e); try { db = initializeFirestore(app, {}); } catch (e2) { db = getFirestore(app); } }
 const auth = getAuth(app);
 
 const erreurUI = m => (window.afficherErreur ? window.afficherErreur(m) : console.error(m));
