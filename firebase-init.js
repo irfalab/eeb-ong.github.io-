@@ -6,7 +6,7 @@ import { initializeFirestore, getFirestore, persistentLocalCache, persistentMult
   collection, doc, getDoc, getDocs, onSnapshot, writeBatch, setDoc, waitForPendingWrites }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider, sendPasswordResetEmail, deleteUser }
+  signOut, updatePassword, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 // ⬇⬇⬇ COLLEZ ICI VOTRE firebaseConfig (Console Firebase > Paramètres du projet > Vos applications)
@@ -32,25 +32,9 @@ const ORDRE_INVERSE = ["journalDep"];                // plus récent d'abord
 const PAGES_TEMPS_REEL = ["suivi","formateur","tuteur","presence","deploiement","parents","liste","documents","temoignages"];
 const MAX_DOC = 900000;                              // Firestore : 1 Mo maximum par document
 
-// ---- Stockage du navigateur bloqué (navigateur intégré, mode privé, cookies bloqués) : repli en mémoire ----
-(() => {
-  const memoire = () => { const d = {}; return {
-    getItem: k => Object.prototype.hasOwnProperty.call(d, k) ? d[k] : null, setItem: (k, v) => { d[k] = String(v); },
-    removeItem: k => { delete d[k]; }, clear: () => { for (const k in d) delete d[k]; }, key: i => Object.keys(d)[i] || null,
-    get length() { return Object.keys(d).length; } }; };
-  for (const nom of ["localStorage", "sessionStorage"]) {
-    let ok = false;
-    try { const st = window[nom]; const t = "__test__"; st.setItem(t, "1"); st.removeItem(t); ok = true; } catch (e) {}
-    if (!ok) { try { Object.defineProperty(window, nom, { value: memoire(), configurable: true }); } catch (e) {} }
-  }
-})();
-
 const app = initializeApp(FIREBASE_CONFIG);
-let db;
-try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
-catch (e) { console.warn("Cache hors ligne indisponible :", e); try { db = initializeFirestore(app, {}); } catch (e2) { db = getFirestore(app); } }
+const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 const auth = getAuth(app);
-try { auth.languageCode = "fr"; } catch (e) {}
 
 const erreurUI = m => (window.afficherErreur ? window.afficherErreur(m) : console.error(m));
 const canon = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x)
@@ -166,6 +150,23 @@ function ecrireCollection(k, liste) {
 }
 
 // ---- Comptes (Firebase Authentication) ----
+// Un compte supprimé par l'administrateur n'efface que la fiche (Firestore) : le compte de connexion (Authentication)
+// existe toujours et bloque la réinscription avec « Cet email existe déjà ». Ici on le récupère s'il n'a plus de fiche.
+async function creerOuRecuperer(authX, dbLecture, email, mdp) {
+  try { return await createUserWithEmailAndPassword(authX, email, mdp); }
+  catch (e) {
+    if (!e || e.code !== "auth/email-already-in-use") throw e;
+    let cred;
+    try { cred = await signInWithEmailAndPassword(authX, email, mdp); }
+    catch (e2) { throw { code: "eeb/compte-orphelin" }; }            // mot de passe différent de l'ancien
+    let fiche = true;
+    try { fiche = (await getDoc(doc(dbLecture, "users", cred.user.uid))).exists(); } catch (e3) {}
+    if (fiche) { await signOut(authX).catch(() => {}); throw { code: "auth/email-already-in-use" }; }   // compte réellement actif
+    return cred;                                                       // ancien compte sans fiche : on le réactive
+  }
+}
+async function reinitialiserMdp(email) { await sendPasswordResetEmail(auth, email.trim().toLowerCase()); }
+
 let appSec = null;
 const getSec = () => appSec || (appSec = initializeApp(FIREBASE_CONFIG, "secondaire"));
 
@@ -174,9 +175,9 @@ const MESSAGES = {
   "auth/user-not-found": "Email ou mot de passe incorrect.", "auth/invalid-email": "Adresse mail invalide.",
   "auth/email-already-in-use": "Cet email existe déjà.", "auth/weak-password": "Mot de passe : 6 caractères minimum.",
   "auth/too-many-requests": "Trop d'essais : réessayez dans quelques minutes.", "auth/network-request-failed": "Pas de connexion internet.",
+  "eeb/compte-orphelin": "Cet e-mail est déjà enregistré (compte existant ou ancien compte supprimé). Saisissez l'ancien mot de passe de cet e-mail pour le réactiver, ou cliquez sur « Réinitialiser le mot de passe » ci-dessous.",
   "eeb/autorisation": "Autorisation refusée : e-mail ou mot de passe administrateur incorrect.",
-  "permission-denied": "Action non autorisée pour ce compte.", "auth/requires-recent-login": "Reconnectez-vous puis réessayez.",
-  "auth/missing-email": "Saisissez votre adresse mail."
+  "permission-denied": "Action non autorisée pour ce compte."
 };
 const messageErreur = e => MESSAGES[e && e.code] || ("Erreur : " + ((e && e.message) || e));
 
@@ -199,7 +200,7 @@ async function inscrire(profil, mdp, autor) {
       const d = u.exists() ? u.data() : {};
       if (d.statut !== "administrateur" && d.statut2 !== "administrateur") throw { code: "eeb/autorisation" };
     }
-    const cred = await createUserWithEmailAndPassword(auth, email, mdp);
+    const cred = await creerOuRecuperer(auth, db, email, mdp);
     const b = writeBatch(dbEcriture);
     b.set(doc(dbEcriture, "users", cred.user.uid), { ...profil, email, _n: nouveauN() });
     if (profil.statut === "administrateur" && !autor) b.set(doc(dbEcriture, "meta", "admin"), { uid: cred.user.uid, date: Date.now() });
@@ -212,7 +213,7 @@ async function creerCompteAdmin(profil, mdp) {
   const authSec = getAuth(getSec());
   const email = profil.email.trim().toLowerCase();
   try {
-    const cred = await createUserWithEmailAndPassword(authSec, email, mdp);
+    const cred = await creerOuRecuperer(authSec, db, email, mdp);
     const data = { ...profil, email, _n: nouveauN() };
     await setDoc(doc(db, "users", cred.user.uid), data);
     const d = data;
@@ -224,29 +225,13 @@ async function verifierMdp(mdp) {
   try { await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, mdp)); return true; }
   catch (e) { return false; }
 }
-// Lien « Mettre à jour mon mot de passe » : Firebase envoie un e-mail avec un lien de changement
-async function reinitialiserMdp(email) { await sendPasswordResetEmail(auth, email.trim().toLowerCase()); }
-// Réinitialisation du compte administrateur : supprime le profil, le marqueur meta/admin et le compte de connexion,
-// ce qui permet de créer un nouveau premier administrateur (sans autorisation) depuis la page d'inscription.
-async function reinitialiserAdmin(mdp) {
-  const u = auth.currentUser; if (!u) throw { code: "auth/requires-recent-login" };
-  await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, mdp));
-  const b = writeBatch(db);
-  b.delete(doc(db, "users", u.uid));
-  b.delete(doc(db, "meta", "admin"));
-  await b.commit();
-  adminExisteFlag = false;
-  desabonner.forEach(f => f()); desabonner = [];
-  await deleteUser(u);
-  majSession();
-}
 async function changerMdp(ancien, nouveau) {
   const u = auth.currentUser;
   await reauthenticateWithCredential(u, EmailAuthProvider.credential(u.email, ancien));
   await updatePassword(u, nouveau);
 }
 
-window.EEB = { lire, ecrire, connecter, deconnecter, inscrire, creerCompteAdmin, verifierMdp, changerMdp, reinitialiserMdp, reinitialiserAdmin, messageErreur,
+window.EEB = { lire, ecrire, connecter, deconnecter, inscrire, creerCompteAdmin, verifierMdp, changerMdp, reinitialiserMdp, messageErreur,
   adminExiste: () => adminExisteFlag, vider: () => waitForPendingWrites(db).catch(() => {}), db, auth };
 
 // ---- Démarrage : session, données, puis app.js ----

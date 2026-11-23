@@ -5,7 +5,7 @@ const COEUR = ["./", "index.html", "connexion.html", "accueil.html", "app.js", "
   "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => Promise.all(COEUR.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(COEUR).catch(() => {})).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k))))
@@ -27,7 +27,7 @@ self.addEventListener("fetch", e => {
   } else if (/gstatic\.com|cdnjs|jsdelivr|fonts\./.test(url.hostname)) {
     // Bibliothèques et polices (versions figées) : cache d'abord
     e.respondWith(caches.match(req).then(r => r || fetch(req).then(n => {
-      if (n.ok) { const copie = n.clone(); caches.open(VERSION).then(c => c.put(req, copie)); }
+      if (n.ok || n.type === "opaque") { const copie = n.clone(); caches.open(VERSION).then(c => c.put(req, copie)); }
       return n;
     })));
   }

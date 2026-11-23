@@ -222,13 +222,10 @@ if (page === "inscription") {
   };
   $("statut").onchange = () => { majBlocAdmin(); majFonction(); };
   $("statut2").onchange = majFonction;
-  if (new URLSearchParams(location.search).get("nouvelAdmin")) {   // après réinitialisation : administrateur + EEB-ONG
-    try { $("statut").value = "administrateur"; majBlocAdmin(); $("statut2").value = "EEB-ONG"; } catch (e) {}
-  }
   majBlocAdmin(); majFonction();
   $("formInscription").onsubmit = e => {
     e.preventDefault();
-    const msg = $("msg"); msg.textContent = "";
+    const msg = $("msg"); msg.textContent = ""; msg.className = "erreur";
     const creeAdmin = $("statut").value === "administrateur";
     const autor = creeAdmin && adminExiste() ? {email:$("emailAutor").value.trim(), mdp:$("mdpAutor").value} : null;
     if ($("mdp").value.length < 6) { msg.textContent = "Mot de passe : 6 caractères minimum."; return; }
@@ -239,8 +236,13 @@ if (page === "inscription") {
           centre:$("centre").value, entreprise:$("entreprise").value, statut:$("statut").value, statut2:creeAdmin ? $("statut2").value : "",
           fonction:$("fonction").value.trim(), derniereConnexion:Date.now()}, $("mdp").value, autor);
         await EEB.vider(); location.href = "accueil.html";
-      } catch (err) { msg.textContent = EEB.messageErreur(err); }
+      } catch (err) { msg.textContent = EEB.messageErreur(err); $("resetMdp").style.display = err && err.code === "eeb/compte-orphelin" ? "" : "none"; }
     }, 300);
+  };
+  $("resetMdp").onclick = async () => {
+    const msg = $("msg");
+    try { await EEB.reinitialiserMdp($("email").value); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu pour choisir un nouveau mot de passe, puis revenez ici et créez votre compte avec ce mot de passe."; }
+    catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
 }
 
@@ -268,7 +270,7 @@ if (page === "connexion") {
     await EEB.vider(); location.href = "accueil.html";
   };
   $("formConnexion").onsubmit = async e => {
-    e.preventDefault(); $("msg").className = "erreur";
+    e.preventDefault();
     const email = $("email").value.trim().toLowerCase(), mdp = $("mdp").value;
     try { await EEB.connecter(email, mdp); } catch (err) { $("msg").textContent = EEB.messageErreur(err); return; }
     const u = lire("users", []).find(x => x.email === email);
@@ -292,17 +294,6 @@ if (page === "connexion") {
       catch (err) { $("msgVerif").textContent = EEB.messageErreur(err); }
     }
     else $("msgVerif").textContent = "Code incorrect.";
-  };
-  // Lien « Mettre à jour mon mot de passe » : envoie un e-mail de changement de mot de passe
-  const oubli = $("mdpOublie");
-  if (oubli) oubli.onclick = async e => {
-    e.preventDefault();
-    const msg = $("msg"), email = $("email").value.trim().toLowerCase();
-    if (!email) { msg.className = "erreur"; msg.textContent = "Saisissez d'abord votre adresse mail, puis touchez « Mettre à jour mon mot de passe »."; return; }
-    try {
-      await EEB.reinitialiserMdp(email);
-      msg.className = ""; msg.textContent = "Si un compte existe pour cette adresse, un e-mail de mise à jour du mot de passe vient d'être envoyé (vérifiez aussi les courriers indésirables).";
-    } catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
   const reinit = $("reinitSite");
   if (reinit) reinit.onclick = e => {
@@ -705,47 +696,6 @@ if (page === "admin") {
       try { await EEB.changerMdp($("mdpActuel").value, $("mdpNouveau2").value); $("formChangerMdp").reset(); $("msgChanger").textContent = "Mot de passe modifié."; }
       catch (x) { $("msgChanger").textContent = EEB.messageErreur(x); }
     };
-
-    // ---- Comptes : suppression (sauf administrateur) et réinitialisation du compte administrateur ----
-    if (!$("sectionComptes")) {
-      const st = document.createElement("style");
-      st.textContent = "#comptesAdmin{list-style:none;padding:0;margin:0}#comptesAdmin li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #c5cad2}#comptesAdmin li span{min-width:0;word-break:break-word}#formReinitAdmin{display:grid;gap:10px;max-width:420px}#formReinitAdmin button{background:#c00}";
-      document.head.appendChild(st);
-      const sec = document.createElement("section"); sec.id = "sectionComptes";
-      sec.innerHTML = '<h2>Supprimer un compte</h2>' +
-        '<p><small>Tous les comptes peuvent être supprimés, sauf les comptes administrateur.</small></p>' +
-        '<ul id="comptesAdmin"></ul><p id="msgComptes"></p>' +
-        '<h2>Réinitialiser le compte administrateur</h2>' +
-        '<p><small>Supprime votre compte administrateur actuel pour en créer un nouveau (administrateur + EEB-ONG). Les autres données du site sont conservées.</small></p>' +
-        '<form id="formReinitAdmin"><input type="password" id="mdpReinit" placeholder="Mot de passe administrateur" autocomplete="current-password" required>' +
-        '<button>Réinitialiser mon compte administrateur</button><p id="msgReinit" class="erreur"></p></form>';
-      $("zoneAdmin").appendChild(sec);
-    }
-    const afficherComptes = () => {
-      const l = lire("users", []).filter(u => !estAdminUser(u)).sort((a, b) => nomMod(a).localeCompare(nomMod(b), "fr"));
-      $("comptesAdmin").innerHTML = l.length ? l.map(u => `<li><span><b>${echapper(nomMod(u))}</b> — ${echapper(u.email)} <small>(${echapper(u.statut || "")})</small></span>
-        <button type="button" data-email="${echapper(u.email)}">Supprimer</button></li>`).join("") : "<li>Aucun compte à supprimer.</li>";
-    };
-    $("comptesAdmin").onclick = e => {
-      const b = e.target.closest("button[data-email]"); if (!b) return;
-      const cible = lire("users", []).find(u => u.email === b.dataset.email);
-      if (!cible || estAdminUser(cible)) return;   // jamais un compte administrateur
-      if (!confirm("Supprimer le compte de " + nomMod(cible) + " (" + cible.email + ") ?")) return;
-      if (!ecrire("users", lire("users", []).filter(u => u.email !== cible.email || estAdminUser(u)))) return;
-      afficherComptes();
-      $("msgComptes").textContent = "Compte supprimé : cette personne ne peut plus accéder au site.";
-    };
-    afficherComptes();
-    $("formReinitAdmin").onsubmit = async e => {
-      e.preventDefault();
-      const msg = $("msgReinit"); msg.className = "erreur";
-      if (!confirm("Votre compte administrateur sera supprimé définitivement. Vous serez ensuite invité à créer le nouveau compte administrateur + EEB-ONG. Continuer ?")) return;
-      msg.textContent = "Réinitialisation en cours…";
-      try {
-        await EEB.reinitialiserAdmin($("mdpReinit").value);
-        sessionStorage.removeItem("admin"); location.href = "inscription.html?nouvelAdmin=1";
-      } catch (err) { msg.textContent = EEB.messageErreur(err); }
-    };
   };
   window.addEventListener("pageshow", e => {
     if (e.persisted && $("zoneAdmin").style.display === "block" && !(estAdmin() && sessionStorage.getItem("admin") === "1")) location.reload();
@@ -806,7 +756,7 @@ const LIBS_QR = ["https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.m
 const LIBS_JSQR = ["https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js", "https://unpkg.com/jsqr@1.4.0/dist/jsQR.js", "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"];
 const scriptsCharges = {};
 const charger = src => scriptsCharges[src] || (scriptsCharges[src] = new Promise((ok, ko) => {
-  const s = document.createElement("script"); s.crossOrigin = "anonymous"; s.src = src; s.onload = () => ok();
+  const s = document.createElement("script"); s.src = src; s.onload = () => ok();
   s.onerror = () => { delete scriptsCharges[src]; ko(new Error("chargement impossible")); }; document.head.appendChild(s); }));
 // Essaie plusieurs adresses l'une après l'autre jusqu'à ce que la bibliothèque (testée par ok()) soit disponible
 async function chargerUne(urls, ok) {
@@ -833,10 +783,10 @@ stPresence.textContent = `.qr-carte{text-align:center;margin:14px auto;padding:1
   .pres{color:#2e9e4f;font-weight:600} .abs{color:#c00;font-weight:600} .attente{color:#8a93a0;font-weight:600}
   .ligne-choix{display:flex;justify-content:flex-end;margin:0 0 12px}
   .ligne-choix select{width:45%;max-width:260px}
-  .fenetre-fond{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+  .fenetre-fond{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
   .fenetre{background:var(--bg);color:var(--bleu);border-radius:14px;padding:20px;max-width:420px;width:100%;text-align:center;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
   .fenetre p{margin:0 0 14px;line-height:1.5}
-  .fenetre video{width:100%;max-height:50vh;object-fit:cover;border-radius:8px;background:#000;margin-bottom:12px}
+  .fenetre video{width:100%;max-height:50vh;border-radius:8px;background:#000;margin-bottom:12px}
   .fenetre .secondaire{background:var(--bleu)}
   .boutons-scan{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}`;
 document.head.appendChild(stPresence);
@@ -858,7 +808,7 @@ async function ouvrirScanner(titre, suite) {
   const fond = document.createElement("div"); fond.className = "fenetre-fond";
   fond.innerHTML = '<div class="fenetre"><p><b class="titre-scan"></b></p><video playsinline muted style="display:none"></video>' +
     '<p class="etat-scan">Démarrage…</p><div class="boutons-scan"><button type="button" class="photo">📷 Photo du code</button>' +
-    '<button type="button" class="reessayer" style="display:none">↻ Réessayer</button><button type="button" class="secondaire annuler">Annuler</button></div><input type="file" accept="image/*" capture="environment" hidden></div>';
+    '<button type="button" class="secondaire annuler">Annuler</button></div><input type="file" accept="image/*" capture="environment" hidden></div>';
   fond.querySelector(".titre-scan").textContent = titre;
   document.body.appendChild(fond);
   const video = fond.querySelector("video"), etat = fond.querySelector(".etat-scan"), fichier = fond.querySelector("input[type=file]");
@@ -866,13 +816,11 @@ async function ouvrirScanner(titre, suite) {
   let flux = null, actif = true, natif = null;
   const fermer = () => { actif = false; if (flux) flux.getTracks().forEach(p => p.stop()); fond.remove(); };
   fond.querySelector(".annuler").onclick = fermer;
-  const btnRe = fond.querySelector(".reessayer"); btnRe.onclick = () => { fermer(); ouvrirScanner(titre, suite); };
 
   // Lecteur : natif si possible, sinon jsQR (chargé depuis plusieurs sources)
   const preparer = async () => {
-    if (typeof jsQR === "function") return true;
-    try { if (!natif && "BarcodeDetector" in window) natif = new BarcodeDetector({formats:["qr_code"]}); } catch (e) { natif = null; }
-    if (natif) { chargerUne(LIBS_JSQR, () => typeof jsQR === "function").catch(() => {}); return true; }   // jsQR chargé en secours, sans bloquer
+    if (natif || typeof jsQR === "function") return true;
+    try { if ("BarcodeDetector" in window) { natif = new BarcodeDetector({formats:["qr_code"]}); return true; } } catch (e) { natif = null; }
     etat.textContent = "Chargement du lecteur de code QR…";
     if (await chargerUne(LIBS_JSQR, () => typeof jsQR === "function")) return true;
     etat.textContent = "Lecteur de code QR introuvable : vérifiez la connexion internet puis réessayez.";
@@ -910,20 +858,15 @@ async function ouvrirScanner(titre, suite) {
   if (!await preparer()) return;
   if (!actif) return;
   etat.textContent = "Démarrage de la caméra…";
-  try {
-    try { flux = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false}); }
-    catch (e0) { if (e0 && (e0.name === "NotAllowedError" || e0.name === "NotFoundError" || e0.name === "NotReadableError")) throw e0;
-      flux = await navigator.mediaDevices.getUserMedia({video:true, audio:false}); }
-  }
+  try { flux = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false}); }
   catch (e) {
-    btnRe.style.display = "";
-    etat.textContent = e && e.name === "NotAllowedError" ? "Caméra non autorisée. Si le navigateur affiche « Ce site ne peut pas demander votre autorisation », désactivez les surcouches (filtre lumière bleue / confort visuel, bulles de discussion, enregistreur d'écran), puis touchez « Réessayer ». Sinon, autorisez la caméra dans les réglages du site ou utilisez « Photo du code »."
+    etat.textContent = e && e.name === "NotAllowedError" ? "Accès à la caméra refusé : autorisez la caméra pour ce site dans le navigateur, ou utilisez « Photo du code »."
       : e && e.name === "NotFoundError" ? "Aucune caméra détectée : utilisez « Photo du code »."
       : e && e.name === "NotReadableError" ? "La caméra est utilisée par une autre application : fermez-la puis réessayez."
       : "Caméra indisponible (" + (e && e.name || "erreur") + ") : utilisez « Photo du code ».";
     return; }
   if (!actif) { flux.getTracks().forEach(p => p.stop()); return; }
-  video.setAttribute("playsinline", ""); video.muted = true; video.srcObject = flux; video.style.display = "block"; try { await video.play(); } catch (e) {}
+  video.srcObject = flux; video.style.display = "block"; try { await video.play(); } catch (e) {}
   etat.textContent = "Placez le code QR devant la caméra.";
   let occupe = false;
   const boucle = async () => {
