@@ -223,6 +223,9 @@ if (page === "inscription") {
   $("statut").onchange = () => { majBlocAdmin(); majFonction(); };
   $("statut2").onchange = majFonction;
   majBlocAdmin(); majFonction();
+  // Bouton « Réinitialiser le mot de passe » : repris dans inscription.html s'il y est, sinon créé ici (évite l'erreur si l'ancienne page est encore en cache)
+  let rb = $("resetMdp");
+  if (!rb) { rb = document.createElement("button"); rb.type = "button"; rb.id = "resetMdp"; rb.textContent = "Réinitialiser le mot de passe"; rb.style.display = "none"; $("msg").after(rb); }
   $("formInscription").onsubmit = e => {
     e.preventDefault();
     const msg = $("msg"); msg.textContent = ""; msg.className = "erreur";
@@ -236,10 +239,10 @@ if (page === "inscription") {
           centre:$("centre").value, entreprise:$("entreprise").value, statut:$("statut").value, statut2:creeAdmin ? $("statut2").value : "",
           fonction:$("fonction").value.trim(), derniereConnexion:Date.now()}, $("mdp").value, autor);
         await EEB.vider(); location.href = "accueil.html";
-      } catch (err) { msg.textContent = EEB.messageErreur(err); $("resetMdp").style.display = err && err.code === "eeb/compte-orphelin" ? "" : "none"; }
+      } catch (err) { msg.textContent = EEB.messageErreur(err); rb.style.display = err && err.code === "eeb/compte-orphelin" ? "" : "none"; }
     }, 300);
   };
-  $("resetMdp").onclick = async () => {
+  rb.onclick = async () => {
     const msg = $("msg");
     try { await EEB.reinitialiserMdp($("email").value); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu pour choisir un nouveau mot de passe, puis revenez ici et créez votre compte avec ce mot de passe."; }
     catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
