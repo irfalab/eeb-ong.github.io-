@@ -298,6 +298,14 @@ if (page === "connexion") {
     }
     else $("msgVerif").textContent = "Code incorrect.";
   };
+  const oubli = $("mdpOublie");
+  if (oubli) oubli.onclick = async e => {
+    e.preventDefault();
+    const msg = $("msg"), email = $("email").value.trim();
+    if (!email) { msg.className = "erreur"; msg.textContent = "Saisissez d'abord votre adresse mail ci-dessus."; return; }
+    try { await EEB.reinitialiserMdp(email); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu (vérifiez aussi les spams) pour choisir un nouveau mot de passe."; }
+    catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
+  };
   const reinit = $("reinitSite");
   if (reinit) reinit.onclick = e => {
     e.preventDefault();
