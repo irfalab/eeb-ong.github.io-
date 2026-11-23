@@ -225,7 +225,7 @@ if (page === "inscription") {
   majBlocAdmin(); majFonction();
   $("formInscription").onsubmit = e => {
     e.preventDefault();
-    const msg = $("msg"); msg.textContent = ""; msg.className = "erreur";
+    const msg = $("msg"); msg.textContent = "";
     const creeAdmin = $("statut").value === "administrateur";
     const autor = creeAdmin && adminExiste() ? {email:$("emailAutor").value.trim(), mdp:$("mdpAutor").value} : null;
     if ($("mdp").value.length < 6) { msg.textContent = "Mot de passe : 6 caractères minimum."; return; }
@@ -236,13 +236,8 @@ if (page === "inscription") {
           centre:$("centre").value, entreprise:$("entreprise").value, statut:$("statut").value, statut2:creeAdmin ? $("statut2").value : "",
           fonction:$("fonction").value.trim(), derniereConnexion:Date.now()}, $("mdp").value, autor);
         await EEB.vider(); location.href = "accueil.html";
-      } catch (err) { msg.textContent = EEB.messageErreur(err); $("resetMdp").style.display = err && err.code === "eeb/compte-orphelin" ? "" : "none"; }
+      } catch (err) { msg.textContent = EEB.messageErreur(err); }
     }, 300);
-  };
-  $("resetMdp").onclick = async () => {
-    const msg = $("msg");
-    try { await EEB.reinitialiserMdp($("email").value); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu pour choisir un nouveau mot de passe, puis revenez ici et créez votre compte avec ce mot de passe."; }
-    catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
 }
 

@@ -6,7 +6,7 @@ import { initializeFirestore, getFirestore, persistentLocalCache, persistentMult
   collection, doc, getDoc, getDocs, onSnapshot, writeBatch, setDoc, waitForPendingWrites }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, updatePassword, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider }
+  signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 // ⬇⬇⬇ COLLEZ ICI VOTRE firebaseConfig (Console Firebase > Paramètres du projet > Vos applications)
@@ -150,23 +150,6 @@ function ecrireCollection(k, liste) {
 }
 
 // ---- Comptes (Firebase Authentication) ----
-// Un compte supprimé par l'administrateur n'efface que la fiche (Firestore) : le compte de connexion (Authentication)
-// existe toujours et bloque la réinscription avec « Cet email existe déjà ». Ici on le récupère s'il n'a plus de fiche.
-async function creerOuRecuperer(authX, dbLecture, email, mdp) {
-  try { return await createUserWithEmailAndPassword(authX, email, mdp); }
-  catch (e) {
-    if (!e || e.code !== "auth/email-already-in-use") throw e;
-    let cred;
-    try { cred = await signInWithEmailAndPassword(authX, email, mdp); }
-    catch (e2) { throw { code: "eeb/compte-orphelin" }; }            // mot de passe différent de l'ancien
-    let fiche = true;
-    try { fiche = (await getDoc(doc(dbLecture, "users", cred.user.uid))).exists(); } catch (e3) {}
-    if (fiche) { await signOut(authX).catch(() => {}); throw { code: "auth/email-already-in-use" }; }   // compte réellement actif
-    return cred;                                                       // ancien compte sans fiche : on le réactive
-  }
-}
-async function reinitialiserMdp(email) { await sendPasswordResetEmail(auth, email.trim().toLowerCase()); }
-
 let appSec = null;
 const getSec = () => appSec || (appSec = initializeApp(FIREBASE_CONFIG, "secondaire"));
 
@@ -175,7 +158,6 @@ const MESSAGES = {
   "auth/user-not-found": "Email ou mot de passe incorrect.", "auth/invalid-email": "Adresse mail invalide.",
   "auth/email-already-in-use": "Cet email existe déjà.", "auth/weak-password": "Mot de passe : 6 caractères minimum.",
   "auth/too-many-requests": "Trop d'essais : réessayez dans quelques minutes.", "auth/network-request-failed": "Pas de connexion internet.",
-  "eeb/compte-orphelin": "Cet e-mail est déjà enregistré (compte existant ou ancien compte supprimé). Saisissez l'ancien mot de passe de cet e-mail pour le réactiver, ou cliquez sur « Réinitialiser le mot de passe » ci-dessous.",
   "eeb/autorisation": "Autorisation refusée : e-mail ou mot de passe administrateur incorrect.",
   "permission-denied": "Action non autorisée pour ce compte."
 };
@@ -200,7 +182,7 @@ async function inscrire(profil, mdp, autor) {
       const d = u.exists() ? u.data() : {};
       if (d.statut !== "administrateur" && d.statut2 !== "administrateur") throw { code: "eeb/autorisation" };
     }
-    const cred = await creerOuRecuperer(auth, db, email, mdp);
+    const cred = await createUserWithEmailAndPassword(auth, email, mdp);
     const b = writeBatch(dbEcriture);
     b.set(doc(dbEcriture, "users", cred.user.uid), { ...profil, email, _n: nouveauN() });
     if (profil.statut === "administrateur" && !autor) b.set(doc(dbEcriture, "meta", "admin"), { uid: cred.user.uid, date: Date.now() });
@@ -213,7 +195,7 @@ async function creerCompteAdmin(profil, mdp) {
   const authSec = getAuth(getSec());
   const email = profil.email.trim().toLowerCase();
   try {
-    const cred = await creerOuRecuperer(authSec, db, email, mdp);
+    const cred = await createUserWithEmailAndPassword(authSec, email, mdp);
     const data = { ...profil, email, _n: nouveauN() };
     await setDoc(doc(db, "users", cred.user.uid), data);
     const d = data;
@@ -231,7 +213,7 @@ async function changerMdp(ancien, nouveau) {
   await updatePassword(u, nouveau);
 }
 
-window.EEB = { lire, ecrire, connecter, deconnecter, inscrire, creerCompteAdmin, verifierMdp, changerMdp, reinitialiserMdp, messageErreur,
+window.EEB = { lire, ecrire, connecter, deconnecter, inscrire, creerCompteAdmin, verifierMdp, changerMdp, messageErreur,
   adminExiste: () => adminExisteFlag, vider: () => waitForPendingWrites(db).catch(() => {}), db, auth };
 
 // ---- Démarrage : session, données, puis app.js ----

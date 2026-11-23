@@ -1,6 +1,6 @@
 // Service worker EEB-ONG : permet l'installation et l'ouverture sans connexion.
 // Changez VERSION à chaque mise à jour du site pour forcer le renouvellement du cache.
-const VERSION = "eeb-v3";
+const VERSION = "eeb-v2";
 const COEUR = ["./", "index.html", "connexion.html", "accueil.html", "app.js", "firebase-init.js", "manifest.json",
   "icons/icon-192.png", "icons/icon-512.png"];
 
