@@ -225,7 +225,7 @@ if (page === "inscription") {
   majBlocAdmin(); majFonction();
   $("formInscription").onsubmit = e => {
     e.preventDefault();
-    const msg = $("msg"); msg.textContent = "";
+    const msg = $("msg"); msg.textContent = ""; msg.className = "erreur";
     const creeAdmin = $("statut").value === "administrateur";
     const autor = creeAdmin && adminExiste() ? {email:$("emailAutor").value.trim(), mdp:$("mdpAutor").value} : null;
     if ($("mdp").value.length < 6) { msg.textContent = "Mot de passe : 6 caractères minimum."; return; }
@@ -236,8 +236,13 @@ if (page === "inscription") {
           centre:$("centre").value, entreprise:$("entreprise").value, statut:$("statut").value, statut2:creeAdmin ? $("statut2").value : "",
           fonction:$("fonction").value.trim(), derniereConnexion:Date.now()}, $("mdp").value, autor);
         await EEB.vider(); location.href = "accueil.html";
-      } catch (err) { msg.textContent = EEB.messageErreur(err); }
+      } catch (err) { msg.textContent = EEB.messageErreur(err); $("resetMdp").style.display = err && err.code === "eeb/compte-orphelin" ? "" : "none"; }
     }, 300);
+  };
+  $("resetMdp").onclick = async () => {
+    const msg = $("msg");
+    try { await EEB.reinitialiserMdp($("email").value); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu pour choisir un nouveau mot de passe, puis revenez ici et créez votre compte avec ce mot de passe."; }
+    catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
 }
 
@@ -392,6 +397,39 @@ if (page === "admin") {
       $("formModo").reset(); afficherModos(); msg.className = ""; msg.textContent = "Modérateur ajouté : il peut se connecter avec son e-mail.";
     };
     afficherModos();
+
+    // ---- Supprimer un compte (section créée ici : aucune modification de admin.html nécessaire) ----
+    {
+      const sec = document.createElement("div");
+      sec.id = "suppCompte";
+      sec.innerHTML = '<h2>Supprimer un compte</h2><p class="note">Recherchez la personne puis cliquez sur « Supprimer ». Son adresse mail pourra ensuite servir à créer un nouveau compte.</p>'
+        + '<input id="suppRech" placeholder="Rechercher (nom, prénom, e-mail)"><ul id="suppListe" style="list-style:none;padding:0;margin:8px 0"></ul><p id="msgSupp" class="erreur"></p>';
+      $("zoneAdmin").appendChild(sec);
+      const nomU = u => ((u.nom ?? "") + " " + (u.prenom ?? "")).trim();
+      const estMoi = u => moi && (u._id === moi._id || (u.email && u.email === moi.email));
+      const afficherSupp = () => {
+        const q = $("suppRech").value.trim().toLowerCase();
+        const l = lire("users", []).filter(u => !q || (nomU(u) + " " + (u.email ?? "")).toLowerCase().includes(q))
+          .sort((a, b) => nomU(a).localeCompare(nomU(b)));
+        $("suppListe").innerHTML = l.length ? l.map(u => `<li style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #c5cad2">
+          <span><b>${echapper(nomU(u))}</b> — ${echapper(u.email)}<br><small>${echapper(statutsDe(u).join(", "))}</small></span>
+          ${estMoi(u) ? "<small>(votre compte)</small>" : `<button type="button" data-id="${echapper(u._id)}">Supprimer</button>`}</li>`).join("") : "<li>Aucun compte trouvé.</li>";
+      };
+      $("suppRech").oninput = afficherSupp;
+      $("suppListe").onclick = e => {
+        const b = e.target.closest("button[data-id]"); if (!b) return;
+        const msg = $("msgSupp"); msg.className = "erreur"; msg.textContent = "";
+        const us = lire("users", []), u = us.find(x => x._id === b.dataset.id);
+        if (!u) return;
+        if (estMoi(u)) { msg.textContent = "Vous ne pouvez pas supprimer votre propre compte."; return; }
+        if (aStatut(u, "administrateur") && us.filter(x => aStatut(x, "administrateur")).length <= 1) { msg.textContent = "Impossible : c'est le dernier administrateur."; return; }
+        if (!confirm("Supprimer définitivement le compte de " + nomU(u) + " (" + u.email + ") ?")) return;
+        if (!ecrire("users", us.filter(x => x._id !== u._id))) return;
+        afficherSupp(); afficherModos();
+        msg.className = ""; msg.textContent = "Compte supprimé : " + u.email + ". Cette adresse peut être réutilisée pour une nouvelle inscription.";
+      };
+      afficherSupp();
+    }
 
     // ---- Parents (formulaire déplacé depuis la page Parents) ----
     const aprListe = () => lire("users", []).filter(u => aStatut(u, "apprenant"));
