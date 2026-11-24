@@ -144,7 +144,10 @@ function ecrireCollection(k, liste) {
   for (let i = 0; i < ops.length; i += 400) {
     const b = writeBatch(db);
     ops.slice(i, i + 400).forEach(o => o.type === "set" ? b.set(doc(db, k, o.id), o.data) : b.delete(doc(db, k, o.id)));
-    b.commit().catch(e => erreurUI("Firebase : " + (e.code === "permission-denied" ? "action non autorisée pour ce compte." : e.message)));
+    b.commit().catch(e => {
+      if (k === "localisations") { console.warn("localisations :", e.message); return; }   // position au bureau : non essentielle, pas de bandeau d'erreur
+      erreurUI("Firebase : " + (e.code === "permission-denied" ? "action non autorisée pour ce compte." : e.message));
+    });
   }
   return true;
 }

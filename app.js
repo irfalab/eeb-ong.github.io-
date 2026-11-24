@@ -1109,7 +1109,7 @@ const distanceM = (la1, lo1, la2, lo2) => {
 };
 let geoId = null, geoDerniere = null, geoBattement = null;
 const envoyerPosition = () => {
-  const m = utilisateurCourant(); if (!m || !geoDerniere) return;
+  const m = utilisateurCourant(); if (!m || !geoDerniere || !EEB.auth.currentUser) return;
   const l = lire("localisations", []);
   const rec = {email:m.email, dansBureau:geoDerniere.dans, distance:geoDerniere.d, maj:Date.now(), date:aujourdhui()};
   const i = l.findIndex(x => x.email === m.email);
