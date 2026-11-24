@@ -21,8 +21,6 @@ service cloud.firestore {
     match /meta/{d} {
       allow read: if true;
       allow create: if connecte() && d == 'admin' && !adminExiste();
-      // Réinitialisation du compte administrateur (bouton de la page Admin)
-      allow delete: if d == 'admin' && admin();
     }
 
     // Logo, images d'accueil, listes (métiers, centres, entreprises), texte d'engagement
@@ -54,6 +52,16 @@ service cloud.firestore {
     match /suivis/{d}          { allow read, write: if connecte(); }
     match /presences/{d}       { allow read, write: if connecte(); }
     match /presencesBureau/{d} { allow read, write: if connecte(); }
+
+    // Missions des membres EEB-ONG : lues par les comptes connectés, saisies par l'administrateur
+    match /missions/{d} { allow read: if connecte(); allow write: if admin(); }
+    // Localisation au bureau : chaque membre n'écrit que sa propre fiche (pas de coordonnées GPS, seulement au bureau / hors du bureau)
+    match /localisations/{d} {
+      allow read: if connecte();
+      allow create, update: if (aStatut('EEB-ONG') || admin())
+        && request.resource.data.email.lower() == request.auth.token.email.lower();
+      allow delete: if admin();
+    }
 
     // Documents et témoignages : visibles par tous, modifiés par l'administrateur
     match /documents/{d}   { allow read: if true; allow write: if admin(); }

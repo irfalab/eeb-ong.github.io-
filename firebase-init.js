@@ -25,11 +25,11 @@ const FIREBASE_CONFIG = {
 };
 
 // Classement des clés utilisées par l'application
-const COLLECTIONS = ["users","parents","groupes","suivis","presences","presencesBureau","engagements","documents","temoignages","messages","journalDep"];
+const COLLECTIONS = ["users","parents","groupes","suivis","presences","presencesBureau","missions","localisations","engagements","documents","temoignages","messages","journalDep"];
 const PRIVE = ["signatureDirecteur"];                // collection « prive » : réservée aux comptes connectés
 const LOCAL = ["session","langue"];                  // propres à l'appareil (localStorage)
 const ORDRE_INVERSE = ["journalDep"];                // plus récent d'abord
-const PAGES_TEMPS_REEL = ["suivi","formateur","tuteur","presence","deploiement","parents","liste","documents","temoignages"];
+const PAGES_TEMPS_REEL = ["suivi","formateur","tuteur","deploiement","parents","liste","documents","temoignages"];
 const MAX_DOC = 900000;                              // Firestore : 1 Mo maximum par document
 
 const app = initializeApp(FIREBASE_CONFIG);

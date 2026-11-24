@@ -117,6 +117,14 @@ h4{margin:18px 0 6px}
 <input id="parTel" type="tel" placeholder="Téléphone" required>
 <input id="parCommune" placeholder="Commune"><input id="parAdresse" placeholder="Adresse">
 <button>Enregistrer le parent</button><p id="msgParent"></p></form>
+<h3>Missions des membres EEB-ONG</h3>
+<form id="formMission">
+<select id="misMembre" required></select>
+<textarea id="misIntitule" placeholder="Mission (objet, lieu…)" rows="2" required></textarea>
+<label>Date de début <input type="date" id="misDebut" required></label>
+<label>Date de fin <input type="date" id="misFin" required></label>
+<button>Enregistrer la mission</button><p id="msgMission" class="erreur"></p></form>
+<ul class="liste-admin" id="listeMissions"></ul>
 <h3 id="titreEng">Engagement</h3>
 <h4>Texte de la page Engagement</h4>
 <div class="edition-texte">

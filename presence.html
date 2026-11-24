@@ -53,9 +53,17 @@ nav{position:fixed;top:0;left:0;width:60%;border-radius:0 0 14px 0;background:va
 <main>
 <h2>Présence</h2>
 <div class="ligne-choix noprint"><select id="choixMembre" aria-label="Choisir un membre de EEB-ONG"></select></div>
-<div id="barreScan" class="barre-outils noprint" style="display:none"><button type="button" id="scanBureau">📷 Scanner le code QR du bureau</button></div>
+<div class="barre-outils noprint">
+<label>Rechercher par date <input type="date" id="dateRecherche"></label>
+<label>Imprimer un mois <input type="month" id="moisImpression"></label>
+<button type="button" id="imprimerMois">🖨 Imprimer le mois</button>
+</div>
+<div id="barreScan" class="barre-outils noprint" style="display:none"><button type="button" id="scanBureau">📷 Scanner le code QR du bureau</button>
+<button type="button" id="activerGeo">📍 Activer ma localisation</button></div>
+<div class="noprint" style="margin:6px 0">Heure de service : 08H30 · Retard : arrivée après 10H00 · Samedis et dimanches non comptés.</div>
 <div id="msgPresence" class="info-cible noprint"></div>
-<table><thead><tr><th>Nom et prénom</th><th>Fonction</th><th>Date</th><th>Présence</th></tr></thead><tbody id="tbody"></tbody></table>
+<table id="tableJour"><thead><tr><th>Nom et prénom</th><th>Fonction</th><th>Date</th><th>En mission</th><th>Présence</th><th>Au bureau</th></tr></thead><tbody id="tbody"></tbody></table>
+<div id="zoneMois"></div>
 </main>
 <script type="module" src="firebase-init.js"></script>
 </body></html>

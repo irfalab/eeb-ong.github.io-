@@ -99,7 +99,7 @@ document.querySelectorAll("#imageApropos").forEach(img => {
 });
 
 // ---- Langue (français / anglais) ----
-const TRAD = {en:{"Accueil":"Home","À propos":"About","Contact":"Contact","EEB-ONG":"EEB-ONG","Admin":"Admin","Parents":"Parents","Engagement":"Commitment","Témoignages":"Testimonials",
+const TRAD = {en:{"Accueil":"Home","À propos":"About","Contact":"Contact","Nous contacter":"Contact us","EEB-ONG":"EEB-ONG","Admin":"Admin","Parents":"Parents","Engagement":"Commitment","Témoignages":"Testimonials",
   "Liste":"List","Formation":"Training","Documents":"Documents","Déploiement":"Deployment","Suivi":"Tracking","Formateur":"Trainer","Tuteur":"Tutor","Présence":"Attendance","Profil":"Profile",
   "Rechercher...":"Search...","Mon profil":"My profile","Langue":"Language","Modifier mes informations":"Edit my information",
   "Données de connexion":"Login details","Photo":"Photo","Se déconnecter":"Log out","Enregistrer":"Save","Nom":"Last name",
@@ -121,7 +121,7 @@ function creerNavbar() {
     <a href="${url}"><span>${ICONES[cle]}</span>${t(txt)}${sous.length ? FLECHE : ""}</a>
     ${sous.length ? `<div class="menu">${sous.map(s => lien(s[0], s[1])).join("")}</div>` : ""}</div>`;
   nav.innerHTML =
-    item("accueil","Accueil","accueil.html",[["Accueil","accueil.html"],["À propos","apropos.html"],["Contact","contact.html"]]) +
+    item("accueil","Accueil","accueil.html",[["Accueil","accueil.html"],["À propos","apropos.html"],["Nous contacter","contact.html"]]) +
     item("eeb","EEB-ONG","liste.html",[...(estAdmin() ? [["Admin","admin.html"]] : []),["Liste","liste.html"],["Parents","parents.html"],...(peutVoir("engagement") ? [["Engagement","engagement.html"]] : []),...(peutVoir("presence") ? [["Présence","presence.html"]] : [])]) +
     item("formation","Formation","documents.html",[["Documents","documents.html"],["Déploiement","deploiement.html"]]) +
     item("suivi","Suivi","suivi.html",[["Témoignages","temoignages.html"],["Suivi","suivi.html"],...(peutVoir("formateur") ? [["Formateur","formateur.html"]] : []),...(peutVoir("tuteur") ? [["Tuteur","tuteur.html"]] : [])]) + item("profil","Profil","profil.html");
@@ -452,6 +452,34 @@ if (page === "admin") {
     $("formParent").onsubmit = e => { e.preventDefault();
       if (!ecrire("parents", [...lire("parents", []), {apprenant:$("parApprenant").value, nom:$("parNom").value, tel:$("parTel").value, commune:$("parCommune").value, adresse:$("parAdresse").value}])) return;
       $("formParent").reset(); $("msgParent").textContent = "Parent enregistré : il est visible sur la page Parents."; remplirEngParents(); infoParentEng(); };
+
+    // ---- Missions des membres EEB-ONG (affichées dans la colonne « En mission » de la page Présence) ----
+    {
+      const nomM = u => ((u.nom ?? "") + " " + (u.prenom ?? "")).trim();
+      const membresM = () => lire("users", []).filter(u => aStatut(u, "EEB-ONG")).sort((a, b) => nomM(a).localeCompare(nomM(b), "fr"));
+      const frM = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? m[3] + "/" + m[2] + "/" + m[1] : (iso || ""); };
+      const remplirMembresM = () => { $("misMembre").innerHTML = '<option value="">Choisir le membre</option>' + membresM().map(u => `<option value="${echapper(u.email)}">${echapper(nomM(u))}</option>`).join(""); };
+      const afficherMissions = () => {
+        const l = [...lire("missions", [])].sort((a, b) => (b.debut || "").localeCompare(a.debut || ""));
+        $("listeMissions").innerHTML = l.length ? l.map(m => `<li><span><b>${echapper(m.membre)}</b> — ${echapper(m.intitule)}<br><small>Du ${frM(m.debut)} au ${frM(m.fin)}</small></span>
+          <button type="button" data-id="${echapper(m._id)}">Supprimer</button></li>`).join("") : "<li>Aucune mission enregistrée.</li>";
+      };
+      $("listeMissions").onclick = e => {
+        const b = e.target.closest("button[data-id]"); if (!b) return;
+        if (!confirm("Supprimer cette mission ?")) return;
+        ecrire("missions", lire("missions", []).filter(m => m._id !== b.dataset.id)); afficherMissions();
+      };
+      $("formMission").onsubmit = e => {
+        e.preventDefault();
+        const msg = $("msgMission"), u = membresM().find(x => x.email === $("misMembre").value);
+        msg.className = "erreur";
+        if (!u) { msg.textContent = "Choisissez un membre de EEB-ONG."; return; }
+        if ($("misFin").value < $("misDebut").value) { msg.textContent = "La date de fin doit être après la date de début."; return; }
+        if (!ecrire("missions", [...lire("missions", []), {email:u.email, membre:nomM(u), intitule:$("misIntitule").value.trim(), debut:$("misDebut").value, fin:$("misFin").value}])) return;
+        $("formMission").reset(); afficherMissions(); msg.className = ""; msg.textContent = "Mission enregistrée : elle apparaît sur la page Présence.";
+      };
+      remplirMembresM(); afficherMissions();
+    }
 
     // ---- Texte de la page Engagement : modifiable ici, affiché sur la page publique Engagement ----
     const zTexte = $("texteEngSaisie"), mTexte = $("msgTexteEng");
@@ -1063,48 +1091,193 @@ function pagePersonnel(role) {   // role : "formateur" ou "tuteur"
 if (page === "formateur") pagePersonnel("formateur");
 if (page === "tuteur") pagePersonnel("tuteur");
 
+// ---- Localisation du personnel au bureau ----
+// La position est calculée sur l'appareil du membre et comparée à celle du bureau. Seuls « au bureau / hors du bureau »,
+// la distance et l'heure de mise à jour sont enregistrés (jamais les coordonnées GPS).
+const BUREAU_GPS = {lat:9.937623985099457, lng:3.206579083971553};   // position GPS du bureau
+const RAYON_BUREAU = 150;                  // mètres : en dessous de cette distance, l'agent est « au bureau »
+const FRAICHEUR_GEO = 5 * 60 * 1000;       // sans nouvelle position depuis 5 minutes : le point passe au rouge
+const HEURE_SERVICE = "08:30";             // heure de service
+const HEURE_RETARD = "10:00";              // après cette heure : retard
+const hFr = h => h.replace(":", "H");
+const estOuvre = iso => { const [a, m, j] = String(iso).split("-").map(Number); return JOURS_OUVRES.includes(new Date(a, m - 1, j).getDay()); };
+const distanceM = (la1, lo1, la2, lo2) => {
+  const r = x => x * Math.PI / 180, R = 6371000;
+  const a = Math.sin(r(la2 - la1) / 2) ** 2 + Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(r(lo2 - lo1) / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+};
+let geoId = null, geoDerniere = null, geoBattement = null;
+const envoyerPosition = () => {
+  const m = utilisateurCourant(); if (!m || !geoDerniere) return;
+  const l = lire("localisations", []);
+  const rec = {email:m.email, dansBureau:geoDerniere.dans, distance:geoDerniere.d, maj:Date.now(), date:aujourdhui()};
+  const i = l.findIndex(x => x.email === m.email);
+  if (i >= 0) Object.assign(l[i], rec); else l.push(rec);
+  ecrire("localisations", l);
+};
+function arreterGeo(signaler = true) {
+  if (geoId !== null) navigator.geolocation.clearWatch(geoId);
+  clearInterval(geoBattement); geoId = null; geoBattement = null;
+  localStorage.removeItem("geoBureau");
+  if (signaler) { geoDerniere = {dans:false, d:null}; envoyerPosition(); }
+}
+function demarrerGeo(auRefus) {
+  if (!navigator.geolocation) return false;
+  if (geoId !== null) return true;
+  geoId = navigator.geolocation.watchPosition(pos => {
+    const d = Math.round(distanceM(pos.coords.latitude, pos.coords.longitude, BUREAU_GPS.lat, BUREAU_GPS.lng)), dans = d <= RAYON_BUREAU;
+    const change = !geoDerniere || geoDerniere.dans !== dans;
+    geoDerniere = {dans, d};
+    if (change) envoyerPosition();
+  }, err => { if (err && err.code === 1) { arreterGeo(false); if (auRefus) auRefus(err); } },   // 1 = autorisation refusée
+  {enableHighAccuracy:true, maximumAge:30000, timeout:30000});
+  geoBattement = setInterval(envoyerPosition, 90000);    // signal régulier : prouve que l'agent est toujours localisé
+  localStorage.setItem("geoBureau", "1");
+  return true;
+}
+// Un membre qui a activé sa localisation reste localisé sur toutes les pages tant que l'application est ouverte
+if (localStorage.getItem("geoBureau") === "1") {
+  const m = utilisateurCourant();
+  if (m && aStatut(m, "EEB-ONG")) demarrerGeo(); else localStorage.removeItem("geoBureau");
+}
+
 // ---- Présence des membres EEB-ONG au bureau ----
 if (page === "presence") {
   const moi = utilisateurCourant(), sel = $("choixMembre"), msg = $("msgPresence");
   const membres = () => lire("users", []).filter(u => aStatut(u, "EEB-ONG")).sort(trierParNom);
-  sel.innerHTML = '<option value="">Tous les membres (aujourd\'hui)</option>' + membres().map(u => `<option value="${echapper(u.email)}">${echapper(nomComplet(u))}</option>`).join("");
-  const etat = (u, d, pres) => {
-    const rec = pres.find(p => p.email === u.email && p.date === d), auj = aujourdhui();
-    if (rec) return '<span class="pres">Présent</span>' + (rec.heure ? ` <small>(${echapper(rec.heure)})</small>` : "");
-    if (d < auj || (d === auj && new Date().getHours() >= HEURE_LIMITE_BUREAU)) return '<span class="abs">Absent</span>';
-    return '<span class="attente">En attente</span>';   // aujourd'hui, avant 12h00
+  sel.innerHTML = '<option value="">Tous les membres</option>' + membres().map(u => `<option value="${echapper(u.email)}">${echapper(nomComplet(u))}</option>`).join("");
+  $("moisImpression").value = aujourdhui().slice(0, 7);
+
+  const stBureau = document.createElement("style");
+  stBureau.textContent = `.pt{display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;margin-right:6px;box-shadow:2px 2px 4px var(--shadow-dark), -2px -2px 4px var(--shadow-light)}
+    .pt-vert{background:#2e9e4f}.pt-rouge{background:#d62828}.pt-gris{background:#b6bcc6}
+    .ret{color:#f28c28;font-weight:600}.mis{color:#1e5aa8;font-weight:600}
+    #zoneMois{overflow-x:auto;margin-top:18px}
+    #zoneMois h3{margin:0 0 8px}
+    #zoneMois table{font-size:11px;margin-top:6px}
+    #zoneMois th,#zoneMois td{padding:4px 3px;text-align:center}
+    #zoneMois th:first-child,#zoneMois td:first-child{text-align:left;white-space:nowrap}
+    #zoneMois td.tot{font-weight:600}
+    @media print{
+      body:not(.impr-mois) #zoneMois{display:none}
+      body.impr-mois main>*:not(#zoneMois){display:none!important}
+      body.impr-mois #zoneMois{overflow:visible}
+      #zoneMois th{background:#1e5aa8!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      #zoneMois th,#zoneMois td{border:1px solid #777!important}
+    }`;
+  document.head.appendChild(stBureau);
+
+  const ctx = () => ({pres:lire("presencesBureau", []), missions:lire("missions", []), locs:lire("localisations", [])});
+  const missionsDe = (u, iso, c) => c.missions.filter(m => m.email === u.email && m.debut <= iso && iso <= (m.fin || m.debut));
+  // Code du jour : P présent · R retard · M en mission · A absent · E en attente · F à venir · W week-end
+  const codeJour = (u, iso, c) => {
+    if (!estOuvre(iso)) return {code:"W"};
+    const rec = c.pres.find(p => p.email === u.email && p.date === iso);
+    if (rec) return {code:(rec.heure && rec.heure > HEURE_RETARD) ? "R" : "P", heure:rec.heure};
+    if (missionsDe(u, iso, c).length) return {code:"M"};
+    const auj = aujourdhui();
+    if (iso > auj) return {code:"F"};
+    if (iso === auj && new Date().getHours() < HEURE_LIMITE_BUREAU) return {code:"E"};
+    return {code:"A"};
   };
-  const ligne = (u, d, pres) => `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${etat(u, d, pres)}</td></tr>`;
+  const badge = r => {
+    const h = r.heure ? ` <small>(${echapper(r.heure)})</small>` : "";
+    return {P:'<span class="pres">Présent</span>' + h, R:'<span class="ret">Retard</span>' + h, M:'<span class="mis">En mission</span>',
+      A:'<span class="abs">Absent</span>', E:'<span class="attente">En attente</span>', F:"-", W:"-"}[r.code];
+  };
+  const pt = (cls, texte, heure) => `<span class="pt ${cls}" title="${texte}"></span><small>${texte}${heure ? " · " + heure : ""}</small>`;
+  const pointBureau = (u, d, c) => {
+    if (d !== aujourdhui()) return "-";
+    const l = c.locs.find(x => x.email === u.email && x.date === d);
+    if (!l) return pt("pt-gris", "Position inconnue");
+    const h = new Date(l.maj).toTimeString().slice(0, 5);
+    if (l.dansBureau && Date.now() - l.maj < FRAICHEUR_GEO) return pt("pt-vert", "Au bureau", h);
+    return pt("pt-rouge", l.dansBureau ? "Plus de signal" : "Hors du bureau", h);
+  };
+  const ligne = (u, d, c) => {
+    const mis = missionsDe(u, d, c).map(m => echapper(m.intitule)).join(" ; ");
+    return `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${mis}</td><td>${badge(codeJour(u, d, c))}</td><td>${pointBureau(u, d, c)}</td></tr>`;
+  };
   const afficher = () => {
-    const pres = lire("presencesBureau", []), auj = aujourdhui(), liste = membres();
+    const c = ctx(), auj = aujourdhui(), liste = membres(), dsel = $("dateRecherche").value;
     let html = "";
-    if (!sel.value) html = liste.map(u => ligne(u, auj, pres)).join("");
-    else {
+    if (dsel && !estOuvre(dsel)) html = `<tr><td colspan="6">Le ${dateFr(dsel)} est un week-end : pas de liste de présence (samedi et dimanche ne sont pas comptés).</td></tr>`;
+    else if (!sel.value || dsel) {          // liste complète d'une date (aujourd'hui par défaut)
+      const d = dsel || auj, l = sel.value ? liste.filter(x => x.email === sel.value) : liste;
+      html = l.map(u => ligne(u, d, c)).join("");
+    } else {
       const u = liste.find(x => x.email === sel.value);
-      if (u) {   // historique du membre : jours ouvrés depuis la 1re présence enregistrée (60 jours maximum)
-        const min = isoDe(new Date(Date.now() - 60 * 864e5)), premier = pres.map(p => p.date).sort()[0] || auj, debut = premier > min ? premier : min;
+      if (u) {   // historique du membre : jours ouvrés (week-ends exclus) depuis la 1re présence enregistrée (60 jours maximum)
+        const min = isoDe(new Date(Date.now() - 60 * 864e5)), premier = c.pres.map(p => p.date).sort()[0] || auj, debut = premier > min ? premier : min;
         for (let d = new Date(); isoDe(d) >= debut; d.setDate(d.getDate() - 1)) {
           const iso = isoDe(d);
-          if (JOURS_OUVRES.includes(d.getDay()) || pres.some(p => p.email === u.email && p.date === iso)) html += ligne(u, iso, pres);
+          if (estOuvre(iso)) html += ligne(u, iso, c);
         }
       }
     }
-    $("tbody").innerHTML = html || '<tr><td colspan="4">Aucun résultat.</td></tr>';
+    $("tbody").innerHTML = html || '<tr><td colspan="6">Aucun résultat.</td></tr>';
     reappliquerRecherche();
   };
+
+  // ---- Impression de la liste d'un mois (du 1er au dernier jour du mois, sans samedis ni dimanches) ----
+  const stPage = document.createElement("style");
+  stPage.textContent = "@page{size:landscape;margin:10mm}";
+  window.addEventListener("afterprint", () => { document.body.classList.remove("impr-mois"); stPage.remove(); });
+  const construireMois = () => {
+    const val = $("moisImpression").value || aujourdhui().slice(0, 7), [a, m] = val.split("-").map(Number);
+    const nb = new Date(a, m, 0).getDate(), c = ctx(), jours = [];
+    for (let j = 1; j <= nb; j++) {
+      const iso = `${a}-${String(m).padStart(2, "0")}-${String(j).padStart(2, "0")}`;
+      if (estOuvre(iso)) jours.push({j, iso, s:"DLMMJVS"[new Date(a, m - 1, j).getDay()]});
+    }
+    const nomMois = new Date(a, m - 1, 1).toLocaleDateString("fr-FR", {month:"long", year:"numeric"});
+    const lettre = {P:"P", R:"R", A:"A", M:"M", E:"", F:"", W:""};
+    const lignes = membres().map(u => {
+      const n = {P:0, R:0, A:0, M:0};
+      const cases = jours.map(x => { const k = codeJour(u, x.iso, c).code; if (n[k] !== undefined) n[k]++; return `<td>${lettre[k]}</td>`; }).join("");
+      return `<tr><td>${echapper(nomComplet(u))}</td>${cases}<td class="tot">${n.P + n.R}</td><td class="tot">${n.R}</td><td class="tot">${n.A}</td><td class="tot">${n.M}</td></tr>`;
+    }).join("");
+    $("zoneMois").innerHTML = `<h3>Liste de présence — ${echapper(nomMois)} (du 1er au ${nb})</h3>
+      <p>Heure de service : ${hFr(HEURE_SERVICE)} · Retard : arrivée après ${hFr(HEURE_RETARD)} · Samedis et dimanches non comptés.<br>
+      <b>P</b> présent · <b>R</b> retard · <b>A</b> absent · <b>M</b> en mission · case vide : jour à venir.</p>
+      <table><thead><tr><th>Nom et prénom</th>${jours.map(x => `<th>${x.j}<br><small>${x.s}</small></th>`).join("")}<th>Présences</th><th>Retards</th><th>Absences</th><th>Missions</th></tr></thead>
+      <tbody>${lignes || `<tr><td colspan="${jours.length + 5}">Aucun membre.</td></tr>`}</tbody></table>
+      <p><small>Édité le ${dateFr(aujourdhui())}</small></p>`;
+  };
+  $("imprimerMois").onclick = () => {
+    construireMois();
+    document.head.appendChild(stPage); document.body.classList.add("impr-mois");
+    window.print();
+  };
+
+  // ---- Enregistrement de la présence (scan du QR code du bureau) ----
   const estMembre = !!moi && aStatut(moi, "EEB-ONG");
   $("barreScan").style.display = estMembre ? "" : "none";
   const enregistrer = async texte => {
     if (!lireBureau(texte)) { await fenetre("Code QR non reconnu : scannez le code QR « EEB-ONG » de la page À propos."); return; }
     if (!estMembre) { await fenetre("Seuls les membres de EEB-ONG peuvent enregistrer leur présence au bureau."); return; }
     const pres = lire("presencesBureau", []), auj = aujourdhui();
+    if (!estOuvre(auj)) { msg.textContent = "Aujourd'hui est un week-end : la présence n'est pas comptée."; return; }
     if (pres.some(p => p.email === moi.email && p.date === auj)) { msg.textContent = "Votre présence d'aujourd'hui est déjà enregistrée."; return; }
     pres.push({email:moi.email, date:auj, heure:heureMin()});
     if (!ecrire("presencesBureau", pres)) return;
-    msg.textContent = "✔ Présence enregistrée à " + heureMin() + "."; afficher();
+    const tard = heureMin() > HEURE_RETARD;
+    msg.textContent = "✔ Présence enregistrée à " + heureMin() + (tard ? " (retard : arrivée après " + hFr(HEURE_RETARD) + ")." : "."); afficher();
   };
   $("scanBureau").onclick = () => ouvrirScanner("Scanner le code QR EEB-ONG du bureau", enregistrer);
-  sel.onchange = afficher;
+
+  // ---- Bouton de localisation ----
+  const majBoutonGeo = () => { $("activerGeo").textContent = geoId !== null ? "📍 Localisation activée (désactiver)" : "📍 Activer ma localisation"; };
+  $("activerGeo").onclick = async () => {
+    if (geoId !== null) { arreterGeo(); majBoutonGeo(); msg.textContent = "Localisation désactivée."; afficher(); return; }
+    if (!navigator.geolocation) { await fenetre("La localisation n'est pas disponible sur cet appareil ou ce navigateur."); return; }
+    demarrerGeo(() => { majBoutonGeo(); fenetre("Localisation refusée : autorisez la position dans les réglages du navigateur pour ce site."); });
+    majBoutonGeo();
+    msg.textContent = "Localisation activée : votre position est comparée à celle du bureau (les coordonnées ne sont pas enregistrées). Gardez l'application ouverte.";
+  };
+  majBoutonGeo();
+
+  sel.onchange = afficher; $("dateRecherche").onchange = afficher;
   const paramQr = new URLSearchParams(location.search).get("qr");   // code lu avec l'appareil photo du téléphone
   if (paramQr) { try { history.replaceState(null, "", location.pathname); } catch (e) {} enregistrer(paramQr); }
   afficher(); synchroniser(afficher);
