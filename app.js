@@ -1099,6 +1099,7 @@ const RAYON_BUREAU = 150;                  // mètres : en dessous de cette dist
 const FRAICHEUR_GEO = 5 * 60 * 1000;       // sans nouvelle position depuis 5 minutes : le point passe au rouge
 const HEURE_SERVICE = "08:30";             // heure de service
 const HEURE_RETARD = "10:00";              // après cette heure : retard
+const HEURE_SORTIE = "18:00";              // le scan de sortie est possible à partir de cette heure
 const hFr = h => h.replace(":", "H");
 const estOuvre = iso => { const [a, m, j] = String(iso).split("-").map(Number); return JOURS_OUVRES.includes(new Date(a, m - 1, j).getDay()); };
 const distanceM = (la1, lo1, la2, lo2) => {
@@ -1196,12 +1197,13 @@ if (page === "presence") {
   };
   const ligne = (u, d, c) => {
     const mis = missionsDe(u, d, c).map(m => echapper(m.intitule)).join(" ; ");
-    return `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${mis}</td><td>${badge(codeJour(u, d, c))}</td><td>${pointBureau(u, d, c)}</td></tr>`;
+    const rec = c.pres.find(p => p.email === u.email && p.date === d), sortie = rec && rec.sortie ? echapper(rec.sortie) : "-";
+    return `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${mis}</td><td>${badge(codeJour(u, d, c))}</td><td>${sortie}</td><td>${pointBureau(u, d, c)}</td></tr>`;
   };
   const afficher = () => {
     const c = ctx(), auj = aujourdhui(), liste = membres(), dsel = $("dateRecherche").value;
     let html = "";
-    if (dsel && !estOuvre(dsel)) html = `<tr><td colspan="6">Le ${dateFr(dsel)} est un week-end : pas de liste de présence (samedi et dimanche ne sont pas comptés).</td></tr>`;
+    if (dsel && !estOuvre(dsel)) html = `<tr><td colspan="7">Le ${dateFr(dsel)} est un week-end : pas de liste de présence (samedi et dimanche ne sont pas comptés).</td></tr>`;
     else if (!sel.value || dsel) {          // liste complète d'une date (aujourd'hui par défaut)
       const d = dsel || auj, l = sel.value ? liste.filter(x => x.email === sel.value) : liste;
       html = l.map(u => ligne(u, d, c)).join("");
@@ -1215,7 +1217,7 @@ if (page === "presence") {
         }
       }
     }
-    $("tbody").innerHTML = html || '<tr><td colspan="6">Aucun résultat.</td></tr>';
+    $("tbody").innerHTML = html || '<tr><td colspan="7">Aucun résultat.</td></tr>';
     reappliquerRecherche();
   };
 
@@ -1257,12 +1259,21 @@ if (page === "presence") {
     if (!lireBureau(texte)) { await fenetre("Code QR non reconnu : scannez le code QR « EEB-ONG » de la page À propos."); return; }
     if (!estMembre) { await fenetre("Seuls les membres de EEB-ONG peuvent enregistrer leur présence au bureau."); return; }
     const pres = lire("presencesBureau", []), auj = aujourdhui();
-    if (!estOuvre(auj)) { msg.textContent = "Aujourd'hui est un week-end : la présence n'est pas comptée."; return; }
-    if (pres.some(p => p.email === moi.email && p.date === auj)) { msg.textContent = "Votre présence d'aujourd'hui est déjà enregistrée."; return; }
+    if (!estOuvre(auj)) { await fenetre("Aujourd'hui est un week-end : la présence n'est pas comptée."); return; }
+    const rec = pres.find(p => p.email === moi.email && p.date === auj);
+    if (rec) {   // deuxième scan : sortie, possible à partir de 18H00
+      if (rec.sortie) { await fenetre("Votre sortie d'aujourd'hui est déjà enregistrée à " + rec.sortie + "."); return; }
+      if (heureMin() < HEURE_SORTIE) { await fenetre("Votre arrivée est déjà enregistrée. Le scan de sortie est possible à partir de " + hFr(HEURE_SORTIE) + "."); return; }
+      rec.sortie = heureMin();
+      if (!ecrire("presencesBureau", pres)) return;
+      msg.textContent = "✔ Sortie enregistrée à " + rec.sortie + "."; afficher();
+      await fenetre("Code QR scanné avec succès"); return;
+    }
     pres.push({email:moi.email, date:auj, heure:heureMin()});
     if (!ecrire("presencesBureau", pres)) return;
     const tard = heureMin() > HEURE_RETARD;
     msg.textContent = "✔ Présence enregistrée à " + heureMin() + (tard ? " (retard : arrivée après " + hFr(HEURE_RETARD) + ")." : "."); afficher();
+    await fenetre("Code QR scanné avec succès");
   };
   $("scanBureau").onclick = () => ouvrirScanner("Scanner le code QR EEB-ONG du bureau", enregistrer);
 
