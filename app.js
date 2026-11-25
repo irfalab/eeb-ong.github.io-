@@ -1166,7 +1166,7 @@ if (page === "presence") {
   const moi = utilisateurCourant(), sel = $("choixMembre"), msg = $("msgPresence");
   const HEURE_RETARD = "10:00";            // arrivée après 10H00 = retard
   const HEURE_SORTIE = 18;                 // scan de sortie à partir de 18H00
-  const BUREAU_GPS = {lat: 9.937661053704652, lng: nul3.2068651915137134, rayon: 200};   // ← À RENSEIGNER : coordonnées du bureau (ex. lat: 6.4489, lng: 2.3560) et rayon en mètres
+  const BUREAU_GPS = {lat: 9.937661053704652, lng: 3.2068651915137134, rayon: 400};   // ← À RENSEIGNER : coordonnées du bureau (ex. lat: 6.4489, lng: 2.3560) et rayon en mètres
   const stP = document.createElement("style");
   stP.textContent = ".ret{color:#f28c28;font-weight:600} .btn-mission{padding:2px 8px;font-size:.7rem;margin-left:6px} body.impr-mois #tableJour{display:none} .bloc-mois{page-break-after:always;margin-bottom:24px} .bloc-mois:last-child{page-break-after:auto}";
   document.head.appendChild(stP);
