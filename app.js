@@ -99,7 +99,7 @@ document.querySelectorAll("#imageApropos").forEach(img => {
 });
 
 // ---- Langue (français / anglais) ----
-const TRAD = {en:{"Accueil":"Home","À propos":"About","Contact":"Contact","Nous contacter":"Contact us","EEB-ONG":"EEB-ONG","Admin":"Admin","Parents":"Parents","Engagement":"Commitment","Témoignages":"Testimonials",
+const TRAD = {en:{"Accueil":"Home","À propos":"About","Contact":"Contact","EEB-ONG":"EEB-ONG","Admin":"Admin","Parents":"Parents","Engagement":"Commitment","Témoignages":"Testimonials",
   "Liste":"List","Formation":"Training","Documents":"Documents","Déploiement":"Deployment","Suivi":"Tracking","Formateur":"Trainer","Tuteur":"Tutor","Présence":"Attendance","Profil":"Profile",
   "Rechercher...":"Search...","Mon profil":"My profile","Langue":"Language","Modifier mes informations":"Edit my information",
   "Données de connexion":"Login details","Photo":"Photo","Se déconnecter":"Log out","Enregistrer":"Save","Nom":"Last name",
@@ -121,7 +121,7 @@ function creerNavbar() {
     <a href="${url}"><span>${ICONES[cle]}</span>${t(txt)}${sous.length ? FLECHE : ""}</a>
     ${sous.length ? `<div class="menu">${sous.map(s => lien(s[0], s[1])).join("")}</div>` : ""}</div>`;
   nav.innerHTML =
-    item("accueil","Accueil","accueil.html",[["Accueil","accueil.html"],["À propos","apropos.html"],["Nous contacter","contact.html"]]) +
+    item("accueil","Accueil","accueil.html",[["Accueil","accueil.html"],["À propos","apropos.html"],["Contact","contact.html"]]) +
     item("eeb","EEB-ONG","liste.html",[...(estAdmin() ? [["Admin","admin.html"]] : []),["Liste","liste.html"],["Parents","parents.html"],...(peutVoir("engagement") ? [["Engagement","engagement.html"]] : []),...(peutVoir("presence") ? [["Présence","presence.html"]] : [])]) +
     item("formation","Formation","documents.html",[["Documents","documents.html"],["Déploiement","deploiement.html"]]) +
     item("suivi","Suivi","suivi.html",[["Témoignages","temoignages.html"],["Suivi","suivi.html"],...(peutVoir("formateur") ? [["Formateur","formateur.html"]] : []),...(peutVoir("tuteur") ? [["Tuteur","tuteur.html"]] : [])]) + item("profil","Profil","profil.html");
@@ -183,6 +183,90 @@ if ($("nav")) {
   ajuster();
 }
 
+// ---- Pied de page (footer) sur toutes les pages : licence + conditions d'utilisation ----
+// Pour modifier les textes, changez uniquement l'objet TERMES ci-dessous (fr = français, en = anglais).
+const TERMES = {
+  fr: {
+    apropos: "À propos", contact: "Contact", lien: "Conditions d'utilisation", fermer: "Fermer",
+    droits: "© 2026 EEB-ONG. Tous droits réservés.",
+    licence: "Ce logiciel et son code source appartiennent à EEB-ONG. Toute copie, modification, distribution ou utilisation est interdite sans son accord écrit préalable.",
+    titre: "Conditions d'utilisation",
+    articles: [
+      ["1. Objet", "Ce site permet à EEB-ONG (Enfant Épanoui Bénin ONG) de suivre les apprentissages des apprenants, au centre de formation et en entreprise. En l'utilisant, vous acceptez les présentes conditions."],
+      ["2. Compte et accès", "L'accès se fait avec un compte personnel. Vous devez fournir des informations exactes et garder votre mot de passe confidentiel. EEB-ONG peut suspendre ou verrouiller un compte, par exemple après plus d'un an d'inactivité."],
+      ["3. Données personnelles", "Le site enregistre les informations nécessaires au suivi (identité, coordonnées, statut, présence, suivi, position GPS lors du suivi, documents). Elles servent uniquement à l'accompagnement des apprenants et ne sont visibles que par les personnes autorisées selon leur statut. Vous pouvez demander à EEB-ONG de corriger ou de supprimer vos données."],
+      ["4. Bonne utilisation", "Il est interdit d'usurper l'identité d'une autre personne, d'essayer d'accéder aux pages réservées, de publier un contenu illégal ou offensant, ou de perturber le fonctionnement du site."],
+      ["5. Propriété et licence", "Ce logiciel et son code source appartiennent à EEB-ONG. Toute copie, modification, distribution ou utilisation est interdite sans son accord écrit préalable."],
+      ["6. Responsabilité", "EEB-ONG s'efforce de garder le site disponible et fiable, mais ne garantit pas l'absence d'interruption ou d'erreur."],
+      ["7. Modifications", "EEB-ONG peut modifier ces conditions à tout moment. Continuer à utiliser le site signifie que vous acceptez la version en vigueur."],
+      ["8. Contact", "Pour toute question, utilisez la page Contact."]
+    ]
+  },
+  en: {
+    apropos: "About", contact: "Contact", lien: "Terms of use", fermer: "Close",
+    droits: "© 2026 EEB-ONG. All rights reserved.",
+    licence: "This software and its source code belong to EEB-ONG. Any copying, modification, distribution or use is prohibited without its prior written consent.",
+    titre: "Terms of use",
+    articles: [
+      ["1. Purpose", "This site allows EEB-ONG (Enfant Épanoui Bénin ONG) to follow the learning of its learners, at the training center and in the company. By using it, you accept these terms."],
+      ["2. Account and access", "Access is through a personal account. You must provide accurate information and keep your password confidential. EEB-ONG may suspend or lock an account, for example after more than one year of inactivity."],
+      ["3. Personal data", "The site stores the information needed for tracking (identity, contact details, status, attendance, tracking, GPS position during tracking, documents). It is used only to support the learners and is visible only to people authorized according to their status. You may ask EEB-ONG to correct or delete your data."],
+      ["4. Proper use", "It is forbidden to impersonate another person, to try to access restricted pages, to publish illegal or offensive content, or to disrupt the site."],
+      ["5. Ownership and license", "This software and its source code belong to EEB-ONG. Any copying, modification, distribution or use is prohibited without its prior written consent."],
+      ["6. Liability", "EEB-ONG does its best to keep the site available and reliable, but does not guarantee the absence of interruptions or errors."],
+      ["7. Changes", "EEB-ONG may change these terms at any time. Continuing to use the site means you accept the current version."],
+      ["8. Contact", "For any question, use the Contact page."]
+    ]
+  }
+};
+
+function creerPied() {
+  const T = TERMES[langue()] || TERMES.fr;
+
+  const stPied = document.createElement("style");
+  stPied.textContent = `.pied{max-width:900px;margin:30px auto 0;padding:14px 20px 18px;text-align:center;font-size:.75rem;color:var(--bleu);background:var(--bg);border-radius:14px 14px 0 0;box-shadow:0 -4px 6px var(--shadow-dark)}
+    .pied a{color:var(--orange);font-weight:bold;text-decoration:none}
+    .pied a:hover{text-decoration:underline}
+    .pied-liens{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 18px;margin-bottom:8px}
+    .pied-licence{margin-top:4px;font-size:.7rem;opacity:.85}
+    .pied-fond{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+    .pied-fenetre{background:var(--bg);color:var(--bleu);border-radius:14px;padding:20px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;text-align:left;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
+    .pied-fenetre h2{margin-top:0}
+    .pied-fenetre h3{font-size:.95rem;color:var(--orange);margin:14px 0 4px}
+    .pied-fenetre p{margin:0;line-height:1.5}
+    .pied-fenetre button{margin-top:16px}
+    @media print{.pied,.pied-fond{display:none!important}}`;
+  document.head.appendChild(stPied);
+
+  const pied = document.createElement("footer");
+  pied.className = "pied noprint";
+  pied.innerHTML = `<div class="pied-liens">
+      <a href="apropos.html">${T.apropos}</a>
+      <a href="contact.html">${T.contact}</a>
+      <a href="#" id="lienTermes">${T.lien}</a>
+    </div>
+    <div>${T.droits}</div>
+    <div class="pied-licence">${T.licence}</div>`;
+  document.body.appendChild(pied);
+
+  // Fenêtre des conditions d'utilisation (fermeture : bouton, clic à côté ou touche Échap)
+  const fermer = () => { const f = document.getElementById("fenetreTermes"); if (f) f.remove(); };
+  pied.querySelector("#lienTermes").addEventListener("click", e => {
+    e.preventDefault(); fermer();
+    const fond = document.createElement("div");
+    fond.id = "fenetreTermes"; fond.className = "pied-fond noprint";
+    fond.innerHTML = `<div class="pied-fenetre" role="dialog" aria-modal="true" aria-label="${T.titre}">
+      <h2>${T.titre}</h2>
+      ${T.articles.map(a => `<h3>${a[0]}</h3><p>${a[1]}</p>`).join("")}
+      <button type="button" id="fermerTermes">${T.fermer}</button></div>`;
+    fond.addEventListener("click", ev => { if (ev.target === fond) fermer(); });
+    document.body.appendChild(fond);
+    document.getElementById("fermerTermes").addEventListener("click", fermer);
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") fermer(); });
+}
+creerPied();
+
 // ---- Pages ----
 const pageDemandee = document.body.dataset.page;
 const accesRefuse = !!ACCES[pageDemandee] && !peutVoir(pageDemandee);
@@ -222,13 +306,13 @@ if (page === "inscription") {
   };
   $("statut").onchange = () => { majBlocAdmin(); majFonction(); };
   $("statut2").onchange = majFonction;
+  if (new URLSearchParams(location.search).get("nouvelAdmin")) {   // après réinitialisation : administrateur + EEB-ONG
+    try { $("statut").value = "administrateur"; majBlocAdmin(); $("statut2").value = "EEB-ONG"; } catch (e) {}
+  }
   majBlocAdmin(); majFonction();
-  // Bouton « Réinitialiser le mot de passe » : repris dans inscription.html s'il y est, sinon créé ici (évite l'erreur si l'ancienne page est encore en cache)
-  let rb = $("resetMdp");
-  if (!rb) { rb = document.createElement("button"); rb.type = "button"; rb.id = "resetMdp"; rb.textContent = "Réinitialiser le mot de passe"; rb.style.display = "none"; $("msg").after(rb); }
   $("formInscription").onsubmit = e => {
     e.preventDefault();
-    const msg = $("msg"); msg.textContent = ""; msg.className = "erreur";
+    const msg = $("msg"); msg.textContent = "";
     const creeAdmin = $("statut").value === "administrateur";
     const autor = creeAdmin && adminExiste() ? {email:$("emailAutor").value.trim(), mdp:$("mdpAutor").value} : null;
     if ($("mdp").value.length < 6) { msg.textContent = "Mot de passe : 6 caractères minimum."; return; }
@@ -239,13 +323,8 @@ if (page === "inscription") {
           centre:$("centre").value, entreprise:$("entreprise").value, statut:$("statut").value, statut2:creeAdmin ? $("statut2").value : "",
           fonction:$("fonction").value.trim(), derniereConnexion:Date.now()}, $("mdp").value, autor);
         await EEB.vider(); location.href = "accueil.html";
-      } catch (err) { msg.textContent = EEB.messageErreur(err); rb.style.display = err && err.code === "eeb/compte-orphelin" ? "" : "none"; }
+      } catch (err) { msg.textContent = EEB.messageErreur(err); }
     }, 300);
-  };
-  rb.onclick = async () => {
-    const msg = $("msg");
-    try { await EEB.reinitialiserMdp($("email").value); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu pour choisir un nouveau mot de passe, puis revenez ici et créez votre compte avec ce mot de passe."; }
-    catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
 }
 
@@ -273,7 +352,7 @@ if (page === "connexion") {
     await EEB.vider(); location.href = "accueil.html";
   };
   $("formConnexion").onsubmit = async e => {
-    e.preventDefault();
+    e.preventDefault(); $("msg").className = "erreur";
     const email = $("email").value.trim().toLowerCase(), mdp = $("mdp").value;
     try { await EEB.connecter(email, mdp); } catch (err) { $("msg").textContent = EEB.messageErreur(err); return; }
     const u = lire("users", []).find(x => x.email === email);
@@ -298,13 +377,16 @@ if (page === "connexion") {
     }
     else $("msgVerif").textContent = "Code incorrect.";
   };
+  // Lien « Mettre à jour mon mot de passe » : envoie un e-mail de changement de mot de passe
   const oubli = $("mdpOublie");
   if (oubli) oubli.onclick = async e => {
     e.preventDefault();
-    const msg = $("msg"), email = $("email").value.trim();
-    if (!email) { msg.className = "erreur"; msg.textContent = "Saisissez d'abord votre adresse mail ci-dessus."; return; }
-    try { await EEB.reinitialiserMdp(email); msg.className = ""; msg.textContent = "E-mail envoyé : ouvrez le lien reçu (vérifiez aussi les spams) pour choisir un nouveau mot de passe."; }
-    catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
+    const msg = $("msg"), email = $("email").value.trim().toLowerCase();
+    if (!email) { msg.className = "erreur"; msg.textContent = "Saisissez d'abord votre adresse mail, puis touchez « Mettre à jour mon mot de passe »."; return; }
+    try {
+      await EEB.reinitialiserMdp(email);
+      msg.className = ""; msg.textContent = "Si un compte existe pour cette adresse, un e-mail de mise à jour du mot de passe vient d'être envoyé (vérifiez aussi les courriers indésirables).";
+    } catch (err) { msg.className = "erreur"; msg.textContent = EEB.messageErreur(err); }
   };
   const reinit = $("reinitSite");
   if (reinit) reinit.onclick = e => {
@@ -409,39 +491,6 @@ if (page === "admin") {
     };
     afficherModos();
 
-    // ---- Supprimer un compte (section créée ici : aucune modification de admin.html nécessaire) ----
-    {
-      const sec = document.createElement("div");
-      sec.id = "suppCompte";
-      sec.innerHTML = '<h2>Supprimer un compte</h2><p class="note">Recherchez la personne puis cliquez sur « Supprimer ». Son adresse mail pourra ensuite servir à créer un nouveau compte.</p>'
-        + '<input id="suppRech" placeholder="Rechercher (nom, prénom, e-mail)"><ul id="suppListe" style="list-style:none;padding:0;margin:8px 0"></ul><p id="msgSupp" class="erreur"></p>';
-      $("zoneAdmin").appendChild(sec);
-      const nomU = u => ((u.nom ?? "") + " " + (u.prenom ?? "")).trim();
-      const estMoi = u => moi && (u._id === moi._id || (u.email && u.email === moi.email));
-      const afficherSupp = () => {
-        const q = $("suppRech").value.trim().toLowerCase();
-        const l = lire("users", []).filter(u => !q || (nomU(u) + " " + (u.email ?? "")).toLowerCase().includes(q))
-          .sort((a, b) => nomU(a).localeCompare(nomU(b)));
-        $("suppListe").innerHTML = l.length ? l.map(u => `<li style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #c5cad2">
-          <span><b>${echapper(nomU(u))}</b> — ${echapper(u.email)}<br><small>${echapper(statutsDe(u).join(", "))}</small></span>
-          ${estMoi(u) ? "<small>(votre compte)</small>" : `<button type="button" data-id="${echapper(u._id)}">Supprimer</button>`}</li>`).join("") : "<li>Aucun compte trouvé.</li>";
-      };
-      $("suppRech").oninput = afficherSupp;
-      $("suppListe").onclick = e => {
-        const b = e.target.closest("button[data-id]"); if (!b) return;
-        const msg = $("msgSupp"); msg.className = "erreur"; msg.textContent = "";
-        const us = lire("users", []), u = us.find(x => x._id === b.dataset.id);
-        if (!u) return;
-        if (estMoi(u)) { msg.textContent = "Vous ne pouvez pas supprimer votre propre compte."; return; }
-        if (aStatut(u, "administrateur") && us.filter(x => aStatut(x, "administrateur")).length <= 1) { msg.textContent = "Impossible : c'est le dernier administrateur."; return; }
-        if (!confirm("Supprimer définitivement le compte de " + nomU(u) + " (" + u.email + ") ?")) return;
-        if (!ecrire("users", us.filter(x => x._id !== u._id))) return;
-        afficherSupp(); afficherModos();
-        msg.className = ""; msg.textContent = "Compte supprimé : " + u.email + ". Cette adresse peut être réutilisée pour une nouvelle inscription.";
-      };
-      afficherSupp();
-    }
-
     // ---- Parents (formulaire déplacé depuis la page Parents) ----
     const aprListe = () => lire("users", []).filter(u => aStatut(u, "apprenant"));
     $("parApprenant").innerHTML = "<option value=''>Choisir d'abord le statut</option>";
@@ -452,34 +501,6 @@ if (page === "admin") {
     $("formParent").onsubmit = e => { e.preventDefault();
       if (!ecrire("parents", [...lire("parents", []), {apprenant:$("parApprenant").value, nom:$("parNom").value, tel:$("parTel").value, commune:$("parCommune").value, adresse:$("parAdresse").value}])) return;
       $("formParent").reset(); $("msgParent").textContent = "Parent enregistré : il est visible sur la page Parents."; remplirEngParents(); infoParentEng(); };
-
-    // ---- Missions des membres EEB-ONG (affichées dans la colonne « En mission » de la page Présence) ----
-    {
-      const nomM = u => ((u.nom ?? "") + " " + (u.prenom ?? "")).trim();
-      const membresM = () => lire("users", []).filter(u => aStatut(u, "EEB-ONG")).sort((a, b) => nomM(a).localeCompare(nomM(b), "fr"));
-      const frM = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ""); return m ? m[3] + "/" + m[2] + "/" + m[1] : (iso || ""); };
-      const remplirMembresM = () => { $("misMembre").innerHTML = '<option value="">Choisir le membre</option>' + membresM().map(u => `<option value="${echapper(u.email)}">${echapper(nomM(u))}</option>`).join(""); };
-      const afficherMissions = () => {
-        const l = [...lire("missions", [])].sort((a, b) => (b.debut || "").localeCompare(a.debut || ""));
-        $("listeMissions").innerHTML = l.length ? l.map(m => `<li><span><b>${echapper(m.membre)}</b> — ${echapper(m.intitule)}<br><small>Du ${frM(m.debut)} au ${frM(m.fin)}</small></span>
-          <button type="button" data-id="${echapper(m._id)}">Supprimer</button></li>`).join("") : "<li>Aucune mission enregistrée.</li>";
-      };
-      $("listeMissions").onclick = e => {
-        const b = e.target.closest("button[data-id]"); if (!b) return;
-        if (!confirm("Supprimer cette mission ?")) return;
-        ecrire("missions", lire("missions", []).filter(m => m._id !== b.dataset.id)); afficherMissions();
-      };
-      $("formMission").onsubmit = e => {
-        e.preventDefault();
-        const msg = $("msgMission"), u = membresM().find(x => x.email === $("misMembre").value);
-        msg.className = "erreur";
-        if (!u) { msg.textContent = "Choisissez un membre de EEB-ONG."; return; }
-        if ($("misFin").value < $("misDebut").value) { msg.textContent = "La date de fin doit être après la date de début."; return; }
-        if (!ecrire("missions", [...lire("missions", []), {email:u.email, membre:nomM(u), intitule:$("misIntitule").value.trim(), debut:$("misDebut").value, fin:$("misFin").value}])) return;
-        $("formMission").reset(); afficherMissions(); msg.className = ""; msg.textContent = "Mission enregistrée : elle apparaît sur la page Présence.";
-      };
-      remplirMembresM(); afficherMissions();
-    }
 
     // ---- Texte de la page Engagement : modifiable ici, affiché sur la page publique Engagement ----
     const zTexte = $("texteEngSaisie"), mTexte = $("msgTexteEng");
@@ -768,6 +789,47 @@ if (page === "admin") {
       try { await EEB.changerMdp($("mdpActuel").value, $("mdpNouveau2").value); $("formChangerMdp").reset(); $("msgChanger").textContent = "Mot de passe modifié."; }
       catch (x) { $("msgChanger").textContent = EEB.messageErreur(x); }
     };
+
+    // ---- Comptes : suppression (sauf administrateur) et réinitialisation du compte administrateur ----
+    if (!$("sectionComptes")) {
+      const st = document.createElement("style");
+      st.textContent = "#comptesAdmin{list-style:none;padding:0;margin:0}#comptesAdmin li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #c5cad2}#comptesAdmin li span{min-width:0;word-break:break-word}#formReinitAdmin{display:grid;gap:10px;max-width:420px}#formReinitAdmin button{background:#c00}";
+      document.head.appendChild(st);
+      const sec = document.createElement("section"); sec.id = "sectionComptes";
+      sec.innerHTML = '<h2>Supprimer un compte</h2>' +
+        '<p><small>Tous les comptes peuvent être supprimés, sauf les comptes administrateur.</small></p>' +
+        '<ul id="comptesAdmin"></ul><p id="msgComptes"></p>' +
+        '<h2>Réinitialiser le compte administrateur</h2>' +
+        '<p><small>Supprime votre compte administrateur actuel pour en créer un nouveau (administrateur + EEB-ONG). Les autres données du site sont conservées.</small></p>' +
+        '<form id="formReinitAdmin"><input type="password" id="mdpReinit" placeholder="Mot de passe administrateur" autocomplete="current-password" required>' +
+        '<button>Réinitialiser mon compte administrateur</button><p id="msgReinit" class="erreur"></p></form>';
+      $("zoneAdmin").appendChild(sec);
+    }
+    const afficherComptes = () => {
+      const l = lire("users", []).filter(u => !estAdminUser(u)).sort((a, b) => nomMod(a).localeCompare(nomMod(b), "fr"));
+      $("comptesAdmin").innerHTML = l.length ? l.map(u => `<li><span><b>${echapper(nomMod(u))}</b> — ${echapper(u.email)} <small>(${echapper(u.statut || "")})</small></span>
+        <button type="button" data-email="${echapper(u.email)}">Supprimer</button></li>`).join("") : "<li>Aucun compte à supprimer.</li>";
+    };
+    $("comptesAdmin").onclick = e => {
+      const b = e.target.closest("button[data-email]"); if (!b) return;
+      const cible = lire("users", []).find(u => u.email === b.dataset.email);
+      if (!cible || estAdminUser(cible)) return;   // jamais un compte administrateur
+      if (!confirm("Supprimer le compte de " + nomMod(cible) + " (" + cible.email + ") ?")) return;
+      if (!ecrire("users", lire("users", []).filter(u => u.email !== cible.email || estAdminUser(u)))) return;
+      afficherComptes();
+      $("msgComptes").textContent = "Compte supprimé : cette personne ne peut plus accéder au site.";
+    };
+    afficherComptes();
+    $("formReinitAdmin").onsubmit = async e => {
+      e.preventDefault();
+      const msg = $("msgReinit"); msg.className = "erreur";
+      if (!confirm("Votre compte administrateur sera supprimé définitivement. Vous serez ensuite invité à créer le nouveau compte administrateur + EEB-ONG. Continuer ?")) return;
+      msg.textContent = "Réinitialisation en cours…";
+      try {
+        await EEB.reinitialiserAdmin($("mdpReinit").value);
+        sessionStorage.removeItem("admin"); location.href = "inscription.html?nouvelAdmin=1";
+      } catch (err) { msg.textContent = EEB.messageErreur(err); }
+    };
   };
   window.addEventListener("pageshow", e => {
     if (e.persisted && $("zoneAdmin").style.display === "block" && !(estAdmin() && sessionStorage.getItem("admin") === "1")) location.reload();
@@ -828,7 +890,7 @@ const LIBS_QR = ["https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.m
 const LIBS_JSQR = ["https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js", "https://unpkg.com/jsqr@1.4.0/dist/jsQR.js", "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"];
 const scriptsCharges = {};
 const charger = src => scriptsCharges[src] || (scriptsCharges[src] = new Promise((ok, ko) => {
-  const s = document.createElement("script"); s.src = src; s.onload = () => ok();
+  const s = document.createElement("script"); s.crossOrigin = "anonymous"; s.src = src; s.onload = () => ok();
   s.onerror = () => { delete scriptsCharges[src]; ko(new Error("chargement impossible")); }; document.head.appendChild(s); }));
 // Essaie plusieurs adresses l'une après l'autre jusqu'à ce que la bibliothèque (testée par ok()) soit disponible
 async function chargerUne(urls, ok) {
@@ -855,10 +917,10 @@ stPresence.textContent = `.qr-carte{text-align:center;margin:14px auto;padding:1
   .pres{color:#2e9e4f;font-weight:600} .abs{color:#c00;font-weight:600} .attente{color:#8a93a0;font-weight:600}
   .ligne-choix{display:flex;justify-content:flex-end;margin:0 0 12px}
   .ligne-choix select{width:45%;max-width:260px}
-  .fenetre-fond{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+  .fenetre-fond{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
   .fenetre{background:var(--bg);color:var(--bleu);border-radius:14px;padding:20px;max-width:420px;width:100%;text-align:center;box-shadow:4px 4px 6px var(--shadow-dark), -4px -4px 6px var(--shadow-light)}
   .fenetre p{margin:0 0 14px;line-height:1.5}
-  .fenetre video{width:100%;max-height:50vh;border-radius:8px;background:#000;margin-bottom:12px}
+  .fenetre video{width:100%;max-height:50vh;object-fit:cover;border-radius:8px;background:#000;margin-bottom:12px}
   .fenetre .secondaire{background:var(--bleu)}
   .boutons-scan{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}`;
 document.head.appendChild(stPresence);
@@ -880,7 +942,7 @@ async function ouvrirScanner(titre, suite) {
   const fond = document.createElement("div"); fond.className = "fenetre-fond";
   fond.innerHTML = '<div class="fenetre"><p><b class="titre-scan"></b></p><video playsinline muted style="display:none"></video>' +
     '<p class="etat-scan">Démarrage…</p><div class="boutons-scan"><button type="button" class="photo">📷 Photo du code</button>' +
-    '<button type="button" class="secondaire annuler">Annuler</button></div><input type="file" accept="image/*" capture="environment" hidden></div>';
+    '<button type="button" class="reessayer" style="display:none">↻ Réessayer</button><button type="button" class="secondaire annuler">Annuler</button></div><input type="file" accept="image/*" capture="environment" hidden></div>';
   fond.querySelector(".titre-scan").textContent = titre;
   document.body.appendChild(fond);
   const video = fond.querySelector("video"), etat = fond.querySelector(".etat-scan"), fichier = fond.querySelector("input[type=file]");
@@ -888,11 +950,13 @@ async function ouvrirScanner(titre, suite) {
   let flux = null, actif = true, natif = null;
   const fermer = () => { actif = false; if (flux) flux.getTracks().forEach(p => p.stop()); fond.remove(); };
   fond.querySelector(".annuler").onclick = fermer;
+  const btnRe = fond.querySelector(".reessayer"); btnRe.onclick = () => { fermer(); ouvrirScanner(titre, suite); };
 
   // Lecteur : natif si possible, sinon jsQR (chargé depuis plusieurs sources)
   const preparer = async () => {
-    if (natif || typeof jsQR === "function") return true;
-    try { if ("BarcodeDetector" in window) { natif = new BarcodeDetector({formats:["qr_code"]}); return true; } } catch (e) { natif = null; }
+    if (typeof jsQR === "function") return true;
+    try { if (!natif && "BarcodeDetector" in window) natif = new BarcodeDetector({formats:["qr_code"]}); } catch (e) { natif = null; }
+    if (natif) { chargerUne(LIBS_JSQR, () => typeof jsQR === "function").catch(() => {}); return true; }   // jsQR chargé en secours, sans bloquer
     etat.textContent = "Chargement du lecteur de code QR…";
     if (await chargerUne(LIBS_JSQR, () => typeof jsQR === "function")) return true;
     etat.textContent = "Lecteur de code QR introuvable : vérifiez la connexion internet puis réessayez.";
@@ -930,15 +994,20 @@ async function ouvrirScanner(titre, suite) {
   if (!await preparer()) return;
   if (!actif) return;
   etat.textContent = "Démarrage de la caméra…";
-  try { flux = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false}); }
+  try {
+    try { flux = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false}); }
+    catch (e0) { if (e0 && (e0.name === "NotAllowedError" || e0.name === "NotFoundError" || e0.name === "NotReadableError")) throw e0;
+      flux = await navigator.mediaDevices.getUserMedia({video:true, audio:false}); }
+  }
   catch (e) {
-    etat.textContent = e && e.name === "NotAllowedError" ? "Accès à la caméra refusé : autorisez la caméra pour ce site dans le navigateur, ou utilisez « Photo du code »."
+    btnRe.style.display = "";
+    etat.textContent = e && e.name === "NotAllowedError" ? "Caméra non autorisée. Si le navigateur affiche « Ce site ne peut pas demander votre autorisation », désactivez les surcouches (filtre lumière bleue / confort visuel, bulles de discussion, enregistreur d'écran), puis touchez « Réessayer ». Sinon, autorisez la caméra dans les réglages du site ou utilisez « Photo du code »."
       : e && e.name === "NotFoundError" ? "Aucune caméra détectée : utilisez « Photo du code »."
       : e && e.name === "NotReadableError" ? "La caméra est utilisée par une autre application : fermez-la puis réessayez."
       : "Caméra indisponible (" + (e && e.name || "erreur") + ") : utilisez « Photo du code ».";
     return; }
   if (!actif) { flux.getTracks().forEach(p => p.stop()); return; }
-  video.srcObject = flux; video.style.display = "block"; try { await video.play(); } catch (e) {}
+  video.setAttribute("playsinline", ""); video.muted = true; video.srcObject = flux; video.style.display = "block"; try { await video.play(); } catch (e) {}
   etat.textContent = "Placez le code QR devant la caméra.";
   let occupe = false;
   const boucle = async () => {
@@ -1091,204 +1160,48 @@ function pagePersonnel(role) {   // role : "formateur" ou "tuteur"
 if (page === "formateur") pagePersonnel("formateur");
 if (page === "tuteur") pagePersonnel("tuteur");
 
-// ---- Localisation du personnel au bureau ----
-// La position est calculée sur l'appareil du membre et comparée à celle du bureau. Seuls « au bureau / hors du bureau »,
-// la distance et l'heure de mise à jour sont enregistrés (jamais les coordonnées GPS).
-const BUREAU_GPS = {lat:9.937623985099457, lng:3.206579083971553};   // position GPS du bureau
-const RAYON_BUREAU = 150;                  // mètres : en dessous de cette distance, l'agent est « au bureau »
-const FRAICHEUR_GEO = 5 * 60 * 1000;       // sans nouvelle position depuis 5 minutes : le point passe au rouge
-const HEURE_SERVICE = "08:30";             // heure de service
-const HEURE_RETARD = "10:00";              // après cette heure : retard
-const HEURE_SORTIE = "18:00";              // le scan de sortie est possible à partir de cette heure
-const hFr = h => h.replace(":", "H");
-const estOuvre = iso => { const [a, m, j] = String(iso).split("-").map(Number); return JOURS_OUVRES.includes(new Date(a, m - 1, j).getDay()); };
-const distanceM = (la1, lo1, la2, lo2) => {
-  const r = x => x * Math.PI / 180, R = 6371000;
-  const a = Math.sin(r(la2 - la1) / 2) ** 2 + Math.cos(r(la1)) * Math.cos(r(la2)) * Math.sin(r(lo2 - lo1) / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-};
-let geoId = null, geoDerniere = null, geoBattement = null;
-const envoyerPosition = () => {
-  const m = utilisateurCourant(); if (!m || !geoDerniere || !EEB.auth.currentUser) return;
-  const l = lire("localisations", []);
-  const rec = {email:m.email, dansBureau:geoDerniere.dans, distance:geoDerniere.d, maj:Date.now(), date:aujourdhui()};
-  const i = l.findIndex(x => x.email === m.email);
-  if (i >= 0) Object.assign(l[i], rec); else l.push(rec);
-  ecrire("localisations", l);
-};
-function arreterGeo(signaler = true) {
-  if (geoId !== null) navigator.geolocation.clearWatch(geoId);
-  clearInterval(geoBattement); geoId = null; geoBattement = null;
-  localStorage.removeItem("geoBureau");
-  if (signaler) { geoDerniere = {dans:false, d:null}; envoyerPosition(); }
-}
-function demarrerGeo(auRefus) {
-  if (!navigator.geolocation) return false;
-  if (geoId !== null) return true;
-  geoId = navigator.geolocation.watchPosition(pos => {
-    const d = Math.round(distanceM(pos.coords.latitude, pos.coords.longitude, BUREAU_GPS.lat, BUREAU_GPS.lng)), dans = d <= RAYON_BUREAU;
-    const change = !geoDerniere || geoDerniere.dans !== dans;
-    geoDerniere = {dans, d};
-    if (change) envoyerPosition();
-  }, err => { if (err && err.code === 1) { arreterGeo(false); if (auRefus) auRefus(err); } },   // 1 = autorisation refusée
-  {enableHighAccuracy:true, maximumAge:30000, timeout:30000});
-  geoBattement = setInterval(envoyerPosition, 90000);    // signal régulier : prouve que l'agent est toujours localisé
-  localStorage.setItem("geoBureau", "1");
-  return true;
-}
-// Un membre qui a activé sa localisation reste localisé sur toutes les pages tant que l'application est ouverte
-if (localStorage.getItem("geoBureau") === "1") {
-  const m = utilisateurCourant();
-  if (m && aStatut(m, "EEB-ONG")) demarrerGeo(); else localStorage.removeItem("geoBureau");
-}
-
 // ---- Présence des membres EEB-ONG au bureau ----
 if (page === "presence") {
   const moi = utilisateurCourant(), sel = $("choixMembre"), msg = $("msgPresence");
   const membres = () => lire("users", []).filter(u => aStatut(u, "EEB-ONG")).sort(trierParNom);
-  sel.innerHTML = '<option value="">Tous les membres</option>' + membres().map(u => `<option value="${echapper(u.email)}">${echapper(nomComplet(u))}</option>`).join("");
-  $("moisImpression").value = aujourdhui().slice(0, 7);
-
-  const stBureau = document.createElement("style");
-  stBureau.textContent = `.pt{display:inline-block;width:22px;height:22px;border-radius:50%;vertical-align:middle;margin-right:6px;box-shadow:2px 2px 4px var(--shadow-dark), -2px -2px 4px var(--shadow-light)}
-    .pt-vert{background:#2e9e4f}.pt-rouge{background:#d62828}.pt-gris{background:#b6bcc6}
-    .ret{color:#f28c28;font-weight:600}.mis{color:#1e5aa8;font-weight:600}
-    #zoneMois{overflow-x:auto;margin-top:18px}
-    #zoneMois h3{margin:0 0 8px}
-    #zoneMois table{font-size:11px;margin-top:6px}
-    #zoneMois th,#zoneMois td{padding:4px 3px;text-align:center}
-    #zoneMois th:first-child,#zoneMois td:first-child{text-align:left;white-space:nowrap}
-    #zoneMois td.tot{font-weight:600}
-    @media print{
-      body:not(.impr-mois) #zoneMois{display:none}
-      body.impr-mois main>*:not(#zoneMois){display:none!important}
-      body.impr-mois #zoneMois{overflow:visible}
-      #zoneMois th{background:#1e5aa8!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      #zoneMois th,#zoneMois td{border:1px solid #777!important}
-    }`;
-  document.head.appendChild(stBureau);
-
-  const ctx = () => ({pres:lire("presencesBureau", []), missions:lire("missions", []), locs:lire("localisations", [])});
-  const missionsDe = (u, iso, c) => c.missions.filter(m => m.email === u.email && m.debut <= iso && iso <= (m.fin || m.debut));
-  // Code du jour : P présent · R retard · M en mission · A absent · E en attente · F à venir · W week-end
-  const codeJour = (u, iso, c) => {
-    if (!estOuvre(iso)) return {code:"W"};
-    const rec = c.pres.find(p => p.email === u.email && p.date === iso);
-    if (rec) return {code:(rec.heure && rec.heure > HEURE_RETARD) ? "R" : "P", heure:rec.heure};
-    if (missionsDe(u, iso, c).length) return {code:"M"};
-    const auj = aujourdhui();
-    if (iso > auj) return {code:"F"};
-    if (iso === auj && new Date().getHours() < HEURE_LIMITE_BUREAU) return {code:"E"};
-    return {code:"A"};
+  sel.innerHTML = '<option value="">Tous les membres (aujourd\'hui)</option>' + membres().map(u => `<option value="${echapper(u.email)}">${echapper(nomComplet(u))}</option>`).join("");
+  const etat = (u, d, pres) => {
+    const rec = pres.find(p => p.email === u.email && p.date === d), auj = aujourdhui();
+    if (rec) return '<span class="pres">Présent</span>' + (rec.heure ? ` <small>(${echapper(rec.heure)})</small>` : "");
+    if (d < auj || (d === auj && new Date().getHours() >= HEURE_LIMITE_BUREAU)) return '<span class="abs">Absent</span>';
+    return '<span class="attente">En attente</span>';   // aujourd'hui, avant 12h00
   };
-  const badge = r => {
-    const h = r.heure ? ` <small>(${echapper(r.heure)})</small>` : "";
-    return {P:'<span class="pres">Présent</span>' + h, R:'<span class="ret">Retard</span>' + h, M:'<span class="mis">En mission</span>',
-      A:'<span class="abs">Absent</span>', E:'<span class="attente">En attente</span>', F:"-", W:"-"}[r.code];
-  };
-  const pt = (cls, texte, heure) => `<span class="pt ${cls}" title="${texte}"></span><small>${texte}${heure ? " · " + heure : ""}</small>`;
-  const pointBureau = (u, d, c) => {
-    if (d !== aujourdhui()) return "-";
-    const l = c.locs.find(x => x.email === u.email && x.date === d);
-    if (!l) return pt("pt-gris", "Position inconnue");
-    const h = new Date(l.maj).toTimeString().slice(0, 5);
-    if (l.dansBureau && Date.now() - l.maj < FRAICHEUR_GEO) return pt("pt-vert", "Au bureau", h);
-    return pt("pt-rouge", l.dansBureau ? "Plus de signal" : "Hors du bureau", h);
-  };
-  const ligne = (u, d, c) => {
-    const mis = missionsDe(u, d, c).map(m => echapper(m.intitule)).join(" ; ");
-    const rec = c.pres.find(p => p.email === u.email && p.date === d), sortie = rec && rec.sortie ? echapper(rec.sortie) : "-";
-    return `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${mis}</td><td>${badge(codeJour(u, d, c))}</td><td>${sortie}</td><td>${pointBureau(u, d, c)}</td></tr>`;
-  };
+  const ligne = (u, d, pres) => `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${etat(u, d, pres)}</td></tr>`;
   const afficher = () => {
-    const c = ctx(), auj = aujourdhui(), liste = membres(), dsel = $("dateRecherche").value;
+    const pres = lire("presencesBureau", []), auj = aujourdhui(), liste = membres();
     let html = "";
-    if (dsel && !estOuvre(dsel)) html = `<tr><td colspan="7">Le ${dateFr(dsel)} est un week-end : pas de liste de présence (samedi et dimanche ne sont pas comptés).</td></tr>`;
-    else if (!sel.value || dsel) {          // liste complète d'une date (aujourd'hui par défaut)
-      const d = dsel || auj, l = sel.value ? liste.filter(x => x.email === sel.value) : liste;
-      html = l.map(u => ligne(u, d, c)).join("");
-    } else {
+    if (!sel.value) html = liste.map(u => ligne(u, auj, pres)).join("");
+    else {
       const u = liste.find(x => x.email === sel.value);
-      if (u) {   // historique du membre : jours ouvrés (week-ends exclus) depuis la 1re présence enregistrée (60 jours maximum)
-        const min = isoDe(new Date(Date.now() - 60 * 864e5)), premier = c.pres.map(p => p.date).sort()[0] || auj, debut = premier > min ? premier : min;
+      if (u) {   // historique du membre : jours ouvrés depuis la 1re présence enregistrée (60 jours maximum)
+        const min = isoDe(new Date(Date.now() - 60 * 864e5)), premier = pres.map(p => p.date).sort()[0] || auj, debut = premier > min ? premier : min;
         for (let d = new Date(); isoDe(d) >= debut; d.setDate(d.getDate() - 1)) {
           const iso = isoDe(d);
-          if (estOuvre(iso)) html += ligne(u, iso, c);
+          if (JOURS_OUVRES.includes(d.getDay()) || pres.some(p => p.email === u.email && p.date === iso)) html += ligne(u, iso, pres);
         }
       }
     }
-    $("tbody").innerHTML = html || '<tr><td colspan="7">Aucun résultat.</td></tr>';
+    $("tbody").innerHTML = html || '<tr><td colspan="4">Aucun résultat.</td></tr>';
     reappliquerRecherche();
   };
-
-  // ---- Impression de la liste d'un mois (du 1er au dernier jour du mois, sans samedis ni dimanches) ----
-  const stPage = document.createElement("style");
-  stPage.textContent = "@page{size:landscape;margin:10mm}";
-  window.addEventListener("afterprint", () => { document.body.classList.remove("impr-mois"); stPage.remove(); });
-  const construireMois = () => {
-    const val = $("moisImpression").value || aujourdhui().slice(0, 7), [a, m] = val.split("-").map(Number);
-    const nb = new Date(a, m, 0).getDate(), c = ctx(), jours = [];
-    for (let j = 1; j <= nb; j++) {
-      const iso = `${a}-${String(m).padStart(2, "0")}-${String(j).padStart(2, "0")}`;
-      if (estOuvre(iso)) jours.push({j, iso, s:"DLMMJVS"[new Date(a, m - 1, j).getDay()]});
-    }
-    const nomMois = new Date(a, m - 1, 1).toLocaleDateString("fr-FR", {month:"long", year:"numeric"});
-    const lettre = {P:"P", R:"R", A:"A", M:"M", E:"", F:"", W:""};
-    const lignes = membres().map(u => {
-      const n = {P:0, R:0, A:0, M:0};
-      const cases = jours.map(x => { const k = codeJour(u, x.iso, c).code; if (n[k] !== undefined) n[k]++; return `<td>${lettre[k]}</td>`; }).join("");
-      return `<tr><td>${echapper(nomComplet(u))}</td>${cases}<td class="tot">${n.P + n.R}</td><td class="tot">${n.R}</td><td class="tot">${n.A}</td><td class="tot">${n.M}</td></tr>`;
-    }).join("");
-    $("zoneMois").innerHTML = `<h3>Liste de présence — ${echapper(nomMois)} (du 1er au ${nb})</h3>
-      <p>Heure de service : ${hFr(HEURE_SERVICE)} · Retard : arrivée après ${hFr(HEURE_RETARD)} · Samedis et dimanches non comptés.<br>
-      <b>P</b> présent · <b>R</b> retard · <b>A</b> absent · <b>M</b> en mission · case vide : jour à venir.</p>
-      <table><thead><tr><th>Nom et prénom</th>${jours.map(x => `<th>${x.j}<br><small>${x.s}</small></th>`).join("")}<th>Présences</th><th>Retards</th><th>Absences</th><th>Missions</th></tr></thead>
-      <tbody>${lignes || `<tr><td colspan="${jours.length + 5}">Aucun membre.</td></tr>`}</tbody></table>
-      <p><small>Édité le ${dateFr(aujourdhui())}</small></p>`;
-  };
-  $("imprimerMois").onclick = () => {
-    construireMois();
-    document.head.appendChild(stPage); document.body.classList.add("impr-mois");
-    window.print();
-  };
-
-  // ---- Enregistrement de la présence (scan du QR code du bureau) ----
   const estMembre = !!moi && aStatut(moi, "EEB-ONG");
   $("barreScan").style.display = estMembre ? "" : "none";
   const enregistrer = async texte => {
     if (!lireBureau(texte)) { await fenetre("Code QR non reconnu : scannez le code QR « EEB-ONG » de la page À propos."); return; }
     if (!estMembre) { await fenetre("Seuls les membres de EEB-ONG peuvent enregistrer leur présence au bureau."); return; }
     const pres = lire("presencesBureau", []), auj = aujourdhui();
-    if (!estOuvre(auj)) { await fenetre("Aujourd'hui est un week-end : la présence n'est pas comptée."); return; }
-    const rec = pres.find(p => p.email === moi.email && p.date === auj);
-    if (rec) {   // deuxième scan : sortie, possible à partir de 18H00
-      if (rec.sortie) { await fenetre("Votre sortie d'aujourd'hui est déjà enregistrée à " + rec.sortie + "."); return; }
-      if (heureMin() < HEURE_SORTIE) { await fenetre("Votre arrivée est déjà enregistrée. Le scan de sortie est possible à partir de " + hFr(HEURE_SORTIE) + "."); return; }
-      rec.sortie = heureMin();
-      if (!ecrire("presencesBureau", pres)) return;
-      msg.textContent = "✔ Sortie enregistrée à " + rec.sortie + "."; afficher();
-      await fenetre("Code QR scanné avec succès"); return;
-    }
+    if (pres.some(p => p.email === moi.email && p.date === auj)) { msg.textContent = "Votre présence d'aujourd'hui est déjà enregistrée."; return; }
     pres.push({email:moi.email, date:auj, heure:heureMin()});
     if (!ecrire("presencesBureau", pres)) return;
-    const tard = heureMin() > HEURE_RETARD;
-    msg.textContent = "✔ Présence enregistrée à " + heureMin() + (tard ? " (retard : arrivée après " + hFr(HEURE_RETARD) + ")." : "."); afficher();
-    await fenetre("Code QR scanné avec succès");
+    msg.textContent = "✔ Présence enregistrée à " + heureMin() + "."; afficher();
   };
   $("scanBureau").onclick = () => ouvrirScanner("Scanner le code QR EEB-ONG du bureau", enregistrer);
-
-  // ---- Bouton de localisation ----
-  const majBoutonGeo = () => { $("activerGeo").textContent = geoId !== null ? "📍 Localisation activée (désactiver)" : "📍 Activer ma localisation"; };
-  $("activerGeo").onclick = async () => {
-    if (geoId !== null) { arreterGeo(); majBoutonGeo(); msg.textContent = "Localisation désactivée."; afficher(); return; }
-    if (!navigator.geolocation) { await fenetre("La localisation n'est pas disponible sur cet appareil ou ce navigateur."); return; }
-    demarrerGeo(() => { majBoutonGeo(); fenetre("Localisation refusée : autorisez la position dans les réglages du navigateur pour ce site."); });
-    majBoutonGeo();
-    msg.textContent = "Localisation activée : votre position est comparée à celle du bureau (les coordonnées ne sont pas enregistrées). Gardez l'application ouverte.";
-  };
-  majBoutonGeo();
-
-  sel.onchange = afficher; $("dateRecherche").onchange = afficher;
+  sel.onchange = afficher;
   const paramQr = new URLSearchParams(location.search).get("qr");   // code lu avec l'appareil photo du téléphone
   if (paramQr) { try { history.replaceState(null, "", location.pathname); } catch (e) {} enregistrer(paramQr); }
   afficher(); synchroniser(afficher);
