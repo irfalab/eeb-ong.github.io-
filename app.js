@@ -1161,46 +1161,137 @@ if (page === "formateur") pagePersonnel("formateur");
 if (page === "tuteur") pagePersonnel("tuteur");
 
 // ---- Présence des membres EEB-ONG au bureau ----
+// Enregistrement dans "presencesBureau" : {email, date, heure, sortie?, mission?, lat?, lng?}
 if (page === "presence") {
   const moi = utilisateurCourant(), sel = $("choixMembre"), msg = $("msgPresence");
+  const HEURE_RETARD = "10:00";            // arrivée après 10H00 = retard
+  const HEURE_SORTIE = 18;                 // scan de sortie à partir de 18H00
+  const BUREAU_GPS = {lat: 9.937661053704652, lng: nul3.2068651915137134, rayon: 200};   // ← À RENSEIGNER : coordonnées du bureau (ex. lat: 6.4489, lng: 2.3560) et rayon en mètres
+  const stP = document.createElement("style");
+  stP.textContent = ".ret{color:#f28c28;font-weight:600} .btn-mission{padding:2px 8px;font-size:.7rem;margin-left:6px} body.impr-mois #tableJour{display:none} .bloc-mois{page-break-after:always;margin-bottom:24px} .bloc-mois:last-child{page-break-after:auto}";
+  document.head.appendChild(stP);
+
   const membres = () => lire("users", []).filter(u => aStatut(u, "EEB-ONG")).sort(trierParNom);
   sel.innerHTML = '<option value="">Tous les membres (aujourd\'hui)</option>' + membres().map(u => `<option value="${echapper(u.email)}">${echapper(nomComplet(u))}</option>`).join("");
-  const etat = (u, d, pres) => {
-    const rec = pres.find(p => p.email === u.email && p.date === d), auj = aujourdhui();
-    if (rec) return '<span class="pres">Présent</span>' + (rec.heure ? ` <small>(${echapper(rec.heure)})</small>` : "");
-    if (d < auj || (d === auj && new Date().getHours() >= HEURE_LIMITE_BUREAU)) return '<span class="abs">Absent</span>';
-    return '<span class="attente">En attente</span>';   // aujourd'hui, avant 12h00
+  const ouvre = iso => JOURS_OUVRES.includes(new Date(iso + "T12:00:00").getDay());
+
+  // --- Localisation ---
+  const position = () => new Promise(ok => {
+    if (!navigator.geolocation) return ok(null);
+    navigator.geolocation.getCurrentPosition(p => ok({lat: p.coords.latitude, lng: p.coords.longitude}), () => ok(null), {enableHighAccuracy: true, timeout: 8000, maximumAge: 0});
+  });
+  const distance = (a, b) => { const R = 6371000, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lng - a.lng);
+    const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+
+  // --- Cellules ---
+  const recDe = (u, d, pres) => pres.find(p => p.email === u.email && p.date === d);
+  const cellMission = (u, d, rec) => {
+    const m = !!(rec && rec.mission), auj = aujourdhui();
+    const bouton = (moi && moi.email === u.email && d === auj) ? `<button type="button" class="btn-mission" data-email="${echapper(u.email)}">${m ? "Annuler" : "Déclarer"}</button>` : "";
+    return (m ? '<span class="pres">Oui</span>' : '<span class="attente">Non</span>') + bouton;
   };
-  const ligne = (u, d, pres) => `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${etat(u, d, pres)}</td></tr>`;
+  const cellPresence = (d, rec) => {
+    if (!ouvre(d)) return '<span class="attente">Week-end</span>';
+    if (rec && rec.heure) return (rec.heure > HEURE_RETARD ? '<span class="ret">Retard</span>' : '<span class="pres">Présent</span>') + ` <small>(${echapper(rec.heure)})</small>`;
+    if (rec && rec.mission) return '<span class="attente">—</span>';
+    const auj = aujourdhui();
+    if (d < auj || (d === auj && new Date().getHours() >= HEURE_LIMITE_BUREAU)) return '<span class="abs">Absent</span>';
+    return '<span class="attente">En attente</span>';
+  };
+  const cellSortie = rec => rec && rec.sortie ? echapper(rec.sortie) : "—";
+  const cellBureau = rec => {
+    if (!rec || !rec.heure) return "—";
+    if (rec.lat == null) return '<span class="attente">Non vérifié</span>';
+    if (BUREAU_GPS.lat == null) return "—";
+    const m = Math.round(distance(rec, BUREAU_GPS));
+    return m <= BUREAU_GPS.rayon ? '<span class="pres">Oui</span>' : `<span class="abs">Non</span> <small>(${m} m)</small>`;
+  };
+  const ligne = (u, d, pres) => { const rec = recDe(u, d, pres);
+    return `<tr><td>${echapper(nomComplet(u))}</td><td>${echapper(u.fonction || "")}</td><td>${dateFr(d)}</td><td>${cellMission(u, d, rec)}</td><td>${cellPresence(d, rec)}</td><td>${cellSortie(rec)}</td><td>${cellBureau(rec)}</td></tr>`; };
+
+  // --- Affichage ---
   const afficher = () => {
-    const pres = lire("presencesBureau", []), auj = aujourdhui(), liste = membres();
+    const pres = lire("presencesBureau", []), auj = aujourdhui(), liste = membres(), dRech = $("dateRecherche").value;
     let html = "";
-    if (!sel.value) html = liste.map(u => ligne(u, auj, pres)).join("");
-    else {
+    if (!sel.value) {
+      const d = dRech || auj;
+      html = ouvre(d) ? liste.map(u => ligne(u, d, pres)).join("") : '<tr><td colspan="7">Samedi et dimanche ne sont pas comptés.</td></tr>';
+    } else {
       const u = liste.find(x => x.email === sel.value);
-      if (u) {   // historique du membre : jours ouvrés depuis la 1re présence enregistrée (60 jours maximum)
+      if (u && dRech) html = ouvre(dRech) ? ligne(u, dRech, pres) : '<tr><td colspan="7">Samedi et dimanche ne sont pas comptés.</td></tr>';
+      else if (u) {   // historique du membre : jours ouvrés depuis la 1re présence enregistrée (60 jours maximum)
         const min = isoDe(new Date(Date.now() - 60 * 864e5)), premier = pres.map(p => p.date).sort()[0] || auj, debut = premier > min ? premier : min;
-        for (let d = new Date(); isoDe(d) >= debut; d.setDate(d.getDate() - 1)) {
-          const iso = isoDe(d);
-          if (JOURS_OUVRES.includes(d.getDay()) || pres.some(p => p.email === u.email && p.date === iso)) html += ligne(u, iso, pres);
-        }
+        for (let d = new Date(); isoDe(d) >= debut; d.setDate(d.getDate() - 1)) { const iso = isoDe(d); if (ouvre(iso)) html += ligne(u, iso, pres); }
       }
     }
-    $("tbody").innerHTML = html || '<tr><td colspan="4">Aucun résultat.</td></tr>';
-    reappliquerRecherche();
+    $("tbody").innerHTML = html || '<tr><td colspan="7">Aucun résultat.</td></tr>';
+    if (typeof reappliquerRecherche === "function") reappliquerRecherche();
   };
+
+  // --- Enregistrement : 1er scan = arrivée, 2e scan (à partir de 18H00) = sortie ---
   const estMembre = !!moi && aStatut(moi, "EEB-ONG");
   $("barreScan").style.display = estMembre ? "" : "none";
   const enregistrer = async texte => {
     if (!lireBureau(texte)) { await fenetre("Code QR non reconnu : scannez le code QR « EEB-ONG » de la page À propos."); return; }
     if (!estMembre) { await fenetre("Seuls les membres de EEB-ONG peuvent enregistrer leur présence au bureau."); return; }
-    const pres = lire("presencesBureau", []), auj = aujourdhui();
-    if (pres.some(p => p.email === moi.email && p.date === auj)) { msg.textContent = "Votre présence d'aujourd'hui est déjà enregistrée."; return; }
-    pres.push({email:moi.email, date:auj, heure:heureMin()});
+    const auj = aujourdhui();
+    if (!ouvre(auj)) { await fenetre("Samedi et dimanche ne sont pas comptés."); return; }
+    const pres = lire("presencesBureau", []);
+    let rec = pres.find(p => p.email === moi.email && p.date === auj);
+    if (rec && rec.sortie) { msg.textContent = "Votre arrivée et votre sortie d'aujourd'hui sont déjà enregistrées."; return; }
+    if (rec && rec.heure) {   // sortie
+      if (new Date().getHours() < HEURE_SORTIE) { msg.textContent = "Présence déjà enregistrée à " + rec.heure + ". Le scan de sortie est possible à partir de 18H00."; return; }
+      rec.sortie = heureMin();
+      if (!ecrire("presencesBureau", pres)) return;
+      msg.textContent = "✔ Sortie enregistrée à " + rec.sortie + "."; afficher(); return;
+    }
+    msg.textContent = "Enregistrement en cours…";
+    const pos = await position();
+    if (!rec) { rec = {email: moi.email, date: auj}; pres.push(rec); }
+    rec.heure = heureMin();
+    if (pos) { rec.lat = pos.lat; rec.lng = pos.lng; }
     if (!ecrire("presencesBureau", pres)) return;
-    msg.textContent = "✔ Présence enregistrée à " + heureMin() + "."; afficher();
+    msg.textContent = "✔ Présence enregistrée à " + rec.heure + (rec.heure > HEURE_RETARD ? " (retard)" : "") + (pos ? "." : ". Localisation non disponible : activez-la pour vérifier votre présence au bureau.");
+    afficher();
   };
   $("scanBureau").onclick = () => ouvrirScanner("Scanner le code QR EEB-ONG du bureau", enregistrer);
+  $("activerGeo").onclick = async () => {
+    msg.textContent = "Demande de localisation…";
+    const pos = await position();
+    msg.textContent = pos ? "✔ Localisation activée." : "Localisation refusée ou indisponible : autorisez-la dans les réglages du navigateur.";
+  };
+
+  // --- En mission (déclaré par le membre pour aujourd'hui) ---
+  $("tbody").onclick = e => {
+    const b = e.target.closest(".btn-mission"); if (!b || !moi || b.dataset.email !== moi.email) return;
+    const pres = lire("presencesBureau", []), auj = aujourdhui();
+    let rec = pres.find(p => p.email === moi.email && p.date === auj);
+    if (!rec) { rec = {email: moi.email, date: auj, mission: true}; pres.push(rec); }
+    else if (rec.mission) { delete rec.mission; if (!rec.heure) pres.splice(pres.indexOf(rec), 1); }
+    else rec.mission = true;
+    if (ecrire("presencesBureau", pres)) afficher();
+  };
+
+  // --- Recherche par date / impression du mois ---
+  $("dateRecherche").onchange = afficher;
+  $("imprimerMois").onclick = async () => {
+    const mois = $("moisImpression").value;
+    if (!mois) { await fenetre("Choisissez d'abord le mois à imprimer."); return; }
+    const pres = lire("presencesBureau", []), auj = aujourdhui(), [an, mm] = mois.split("-").map(Number);
+    const liste = sel.value ? membres().filter(u => u.email === sel.value) : membres(), nbJours = new Date(an, mm, 0).getDate();
+    const nomMois = new Date(an, mm - 1, 1).toLocaleDateString("fr-FR", {month: "long", year: "numeric"});
+    $("zoneMois").innerHTML = liste.map(u => {
+      let l = "";
+      for (let j = 1; j <= nbJours; j++) { const iso = mois + "-" + String(j).padStart(2, "0"); if (!ouvre(iso) || iso > auj) continue;
+        const rec = recDe(u, iso, pres);
+        l += `<tr><td>${dateFr(iso)}</td><td>${rec && rec.mission ? "Oui" : "Non"}</td><td>${cellPresence(iso, rec)}</td><td>${cellSortie(rec)}</td><td>${cellBureau(rec)}</td></tr>`; }
+      return `<div class="bloc-mois"><h2>${echapper(nomComplet(u))} — ${echapper(u.fonction || "")} — ${nomMois}</h2><table><thead><tr><th>Date</th><th>En mission</th><th>Présence</th><th>Sortie</th><th>Au bureau</th></tr></thead><tbody>${l || '<tr><td colspan="5">Aucun jour à afficher.</td></tr>'}</tbody></table></div>`;
+    }).join("");
+    document.body.classList.add("impr-mois");
+    window.onafterprint = () => { document.body.classList.remove("impr-mois"); $("zoneMois").innerHTML = ""; window.onafterprint = null; };
+    window.print();
+  };
+
   sel.onchange = afficher;
   const paramQr = new URLSearchParams(location.search).get("qr");   // code lu avec l'appareil photo du téléphone
   if (paramQr) { try { history.replaceState(null, "", location.pathname); } catch (e) {} enregistrer(paramQr); }
