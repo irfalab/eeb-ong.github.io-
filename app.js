@@ -1285,7 +1285,7 @@ if (page === "presence") {
       for (let j = 1; j <= nbJours; j++) { const iso = mois + "-" + String(j).padStart(2, "0"); if (!ouvre(iso) || iso > auj) continue;
         const rec = recDe(u, iso, pres);
         l += `<tr><td>${dateFr(iso)}</td><td>${rec && rec.mission ? "Oui" : "Non"}</td><td>${cellPresence(iso, rec)}</td><td>${cellSortie(rec)}</td><td>${cellBureau(rec)}</td></tr>`; }
-      return `<div class="bloc-mois"><h2>${echapper(nomComplet(u))} — ${echapper(u.fonction || "")} — ${nomMois}</h2><table><thead><tr><th>Date</th><th>En mission</th><th>Présence</th><th>Sortie</th><th>Au bureau</th></tr></thead><tbody>${l || '<tr><td colspan="5">Aucun jour à afficher.</td></tr>'}</tbody></table></div>`;
+      return `<div class="bloc-mois"><h2>${echapper(nomComplet(u))} — ${echapper(u.fonction || "")} — ${nomMois}</h2><table><thead><tr><th>Date</th><th>En mission</th><th>Entrée</th><th>Sortie</th><th>Au bureau</th></tr></thead><tbody>${l || '<tr><td colspan="5">Aucun jour à afficher.</td></tr>'}</tbody></table></div>`;
     }).join("");
     document.body.classList.add("impr-mois");
     window.onafterprint = () => { document.body.classList.remove("impr-mois"); $("zoneMois").innerHTML = ""; window.onafterprint = null; };
