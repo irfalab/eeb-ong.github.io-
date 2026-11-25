@@ -45,41 +45,135 @@ nav{position:fixed;top:0;left:0;width:60%;border-radius:0 0 14px 0;background:va
 .entete-page h1,.entete-page h2{border:none;margin:0 0 6px;padding:0}
 .recherche{width:45%;max-width:260px;margin-bottom:6px}
 .logo-moyen{position:fixed;top:6px;right:12px;width:80px;z-index:9}
-#photoProfil{box-shadow:5px 5px 8px #c2c6cb, -5px -5px 8px #f8fcff}
 @media print{nav,.noprint{display:none} body{background:#fff;padding-top:0!important} *{box-shadow:none!important}}
+
+/* ===== Page profil : cartes (modèle capture) ===== */
+main{max-width:720px}
+.titre-page{color:var(--orange);font-size:1.7rem;font-weight:600;margin:6px 0 14px;border:none;padding:0}
+.carte{background:var(--bg);border-radius:16px;padding:14px;box-shadow:6px 6px 10px var(--shadow-dark), -6px -6px 10px var(--shadow-light)}
+.carte h3{margin:2px 0 10px;padding-bottom:8px;border-bottom:1px solid #c5cad2;color:var(--orange);font-size:1rem;display:flex;align-items:center;gap:8px}
+.entete-profil{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.zone-photo{position:relative;width:78px;height:78px;flex:none}
+#photoProfil{width:78px;height:78px;border-radius:50%;object-fit:cover;box-shadow:4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light)}
+.badge-photo{position:absolute;right:-4px;bottom:-4px;width:28px;height:28px;border-radius:50%;background:var(--bg);color:var(--bleu);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:3px 3px 5px var(--shadow-dark), -3px -3px 5px var(--shadow-light)}
+.badge-photo:focus-within{outline:2px solid var(--orange)}
+.badge-photo input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;box-shadow:none;padding:0}
+.identite{flex:1;min-width:180px;text-align:left}
+#nomProfil{margin:0 0 4px;color:var(--orange);font-size:1.15rem;font-weight:600}
+#detailsProfil{margin:0;font-size:.78rem;line-height:1.5;color:var(--bleu)}
+.actions-profil{display:flex;align-items:center;gap:12px;margin-left:auto}
+.btn-principal{background:var(--bleu);color:#fff;border-radius:999px;padding:10px 18px;font-weight:600}
+.btn-lien{background:none;color:var(--bleu);box-shadow:none;font-weight:600;padding:10px 6px}
+.btn-lien:hover{box-shadow:none;color:var(--orange)}
+.grille{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;align-items:start}
+.colonne{display:grid;gap:16px}
+.ligne{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;background:none;color:var(--bleu);border:none;border-radius:0;box-shadow:none;border-bottom:1px solid #c5cad2;padding:12px 2px;font-size:.82rem;text-align:left}
+.ligne:last-child{border-bottom:none}
+.ligne:hover{box-shadow:none;color:var(--orange)}
+.ligne .val{color:#6b7587;font-size:.75rem;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+.ligne .chev::after{content:"\203A";margin-left:6px;color:#6b7587}
+div.ligne{cursor:default}
+div.ligne:hover{color:var(--bleu)}
+.ligne select{padding:6px 8px;font-size:.78rem}
+.panneau{margin-top:16px}
+.panneau[hidden]{display:none}
+#msgProfil{margin:12px 2px 0;min-height:1em}
+@media(max-width:700px){.grille{grid-template-columns:1fr}.actions-profil{margin-left:0;width:100%;justify-content:space-between}}
 </style>
 </head>
 <body data-page="profil">
 <nav id="nav"></nav>
 <main>
-<div style="text-align:center;margin-bottom:12px">
-<img id="photoProfil" alt="Photo" style="width:110px;height:110px;border-radius:50%;object-fit:cover">
+<h2 class="titre-page" data-i18n="Mon profil">Mon profil</h2>
+
+<section class="carte entete-profil">
+  <div class="zone-photo">
+    <img id="photoProfil" alt="Photo">
+    <label class="badge-photo" title="Photo" aria-label="Changer la photo">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <input type="file" id="nouvellePhoto" accept="image/*">
+    </label>
+  </div>
+  <div class="identite">
+    <h3 id="nomProfil"></h3>
+    <p id="detailsProfil"></p>
+  </div>
+  <div class="actions-profil">
+    <button type="button" class="btn-principal" data-ouvre="panneauInfos" data-i18n="Modifier mes informations">Modifier mes informations</button>
+    <button id="deconnexion" class="btn-lien" data-i18n="Se déconnecter">Se déconnecter</button>
+  </div>
+</section>
+<p id="msgProfil" class="erreur"></p>
+
+<div class="grille">
+  <div class="colonne">
+    <section class="carte">
+      <h3>👤 <span>Informations du compte</span></h3>
+      <button type="button" class="ligne" data-ouvre="panneauInfos"><span data-i18n="Métier">Métier</span><span class="val chev" id="rMetier">—</span></button>
+      <button type="button" class="ligne" data-ouvre="panneauInfos"><span data-i18n="Centre de formation">Centre de formation</span><span class="val chev" id="rCentre">—</span></button>
+      <button type="button" class="ligne" data-ouvre="panneauInfos"><span data-i18n="Entreprise">Entreprise</span><span class="val chev" id="rEntreprise">—</span></button>
+      <button type="button" class="ligne" data-ouvre="panneauInfos"><span data-i18n="Téléphone">Téléphone</span><span class="val chev" id="rTel">—</span></button>
+    </section>
+    <section class="carte">
+      <h3>⚙️ <span>Préférences</span></h3>
+      <div class="ligne"><label for="langue" data-i18n="Langue">Langue</label>
+        <select id="langue"><option value="fr">Français</option><option value="en">English</option></select></div>
+    </section>
+  </div>
+
+  <div class="colonne">
+    <section class="carte">
+      <h3>🔒 <span>Sécurité du compte</span></h3>
+      <button type="button" class="ligne" data-ouvre="panneauConn"><span>Modifier le mot de passe</span><span class="val chev"></span></button>
+      <button type="button" class="ligne" data-ouvre="panneauConn"><span data-i18n="Adresse mail">Adresse mail</span><span class="val chev" id="rEmail">—</span></button>
+      <button type="button" class="ligne" data-ouvre="panneauInfos"><span>Changer de numéro de téléphone</span><span class="val chev"></span></button>
+    </section>
+  </div>
 </div>
-<h2 data-i18n="Mon profil">Mon profil</h2>
-<div style="text-align:center">
-<h3 id="nomProfil"></h3><p id="detailsProfil"></p></div>
 
-<h3 data-i18n="Langue">Langue</h3>
-<select id="langue"><option value="fr">Français</option><option value="en">English</option></select>
-
+<section class="carte panneau" id="panneauInfos" hidden>
 <h3 data-i18n="Modifier mes informations">Modifier mes informations</h3>
 <form id="formInfos">
 <input id="nom" data-i18n-ph="Nom" placeholder="Nom" required><input id="prenom" data-i18n-ph="Prénom" placeholder="Prénom" required>
 <input id="tel" type="tel" data-i18n-ph="Téléphone" placeholder="Téléphone" required>
 <select id="metier"></select><select id="centre"></select><select id="entreprise"></select>
 <button data-i18n="Enregistrer">Enregistrer</button></form>
+</section>
 
+<section class="carte panneau" id="panneauConn" hidden>
 <h3 data-i18n="Données de connexion">Données de connexion</h3>
 <form id="formConn">
 <input id="email" type="email" data-i18n-ph="Adresse mail" placeholder="Adresse mail" required>
 <input id="ancienMdp" type="password" data-i18n-ph="Mot de passe actuel" placeholder="Mot de passe actuel" required>
 <input id="nouveauMdp" type="password" data-i18n-ph="Nouveau mot de passe (facultatif)" placeholder="Nouveau mot de passe (facultatif)">
 <button data-i18n="Enregistrer">Enregistrer</button></form>
-
-<h3 data-i18n="Photo">Photo</h3>
-<input type="file" id="nouvellePhoto" accept="image/*">
-<p id="msgProfil" class="erreur"></p>
-<button id="deconnexion" data-i18n="Se déconnecter">Se déconnecter</button>
+</section>
 </main>
+
+<script>
+/* Affichage uniquement : ouverture des panneaux et recopie des valeurs dans les lignes.
+   Toute la logique (enregistrement, photo, langue, déconnexion) reste dans app.js. */
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  document.querySelectorAll('[data-ouvre]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var p = $(b.dataset.ouvre); if(!p) return;
+      p.hidden = false; p.scrollIntoView({behavior:'smooth', block:'start'});
+      var champ = p.querySelector('input,select'); if(champ) champ.focus({preventScroll:true});
+    });
+  });
+  function texte(el){
+    if(!el) return '';
+    if(el.tagName === 'SELECT'){ var o = el.selectedOptions[0]; return el.value && o ? o.text : ''; }
+    return el.value || '';
+  }
+  function remplir(){
+    [['rMetier','metier'],['rCentre','centre'],['rEntreprise','entreprise'],['rTel','tel'],['rEmail','email']]
+      .forEach(function(c){ var s = $(c[0]); if(s) s.textContent = texte($(c[1])) || '—'; });
+  }
+  var cible = $('detailsProfil');
+  if(cible) new MutationObserver(function(){ setTimeout(remplir, 0); }).observe(cible, {childList:true});
+})();
+</script>
 <script type="module" src="firebase-init.js"></script>
 </body></html>
